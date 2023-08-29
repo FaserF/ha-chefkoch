@@ -1,0 +1,18 @@
+{
+  "domain": "chefkoch",
+  "name": "Chefkoch",
+  "codeowners": [
+    "@faserf"
+  ],
+  "config_flow": true,
+  "documentation": "https://github.com/faserf/ha-chefkoch#readme",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/faserf/ha-chefkoch/issues",
+  "loggers": [
+    "python_chefkoch"
+  ],
+  "requirements": [
+    "python_chefkoch==1.0.0"
+  ],
+  "version": "1.0.0"
+}

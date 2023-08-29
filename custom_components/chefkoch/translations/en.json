@@ -1,0 +1,16 @@
+{
+  "config": {
+    "flow_title": "Setup Chefkoch Integration",
+    "step": {
+      "user": {
+        "description": "This enables the chefkoch integration"
+      }
+    },
+    "abort": {
+      "already_configured": "The chefkoch integration is already configured"
+    },
+    "error": {
+      "unknown": "Unknown Error"
+    }
+  }
+}

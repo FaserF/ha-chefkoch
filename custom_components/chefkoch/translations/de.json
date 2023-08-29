@@ -1,0 +1,16 @@
+{
+  "config": {
+    "flow_title": "Einrichtung der Chefkoch Integration",
+    "step": {
+      "user": {
+        "description": "Hiermit aktivierst du die Chefkoch Integration"
+      }
+    },
+    "abort": {
+      "already_configured": "Die Chefkoch Integration ist bereits konfiguriert."
+    },
+    "error": {
+      "unknown": "Unbekannter Fehler"
+    }
+  }
+}
