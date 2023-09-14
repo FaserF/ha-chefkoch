@@ -1,4 +1,4 @@
-"""deutschebahn sensor platform."""
+"""chefkoch sensor platform."""
 from datetime import timedelta, datetime
 import logging
 from typing import Any, Callable, Dict, Optional
@@ -54,7 +54,7 @@ class ChefkochSensorDaily(SensorEntity):
         self._available = True
         self.hass = hass
         self.updated = datetime.now()
-        self.attrs: None
+        self.attrs: {}
 
     @property
     def name(self):
@@ -235,7 +235,7 @@ class ChefkochSensorDailyBacke(SensorEntity):
                 hass = self.hass
                 """Pull data from the chefkoch.de web page."""
                 data = await hass.async_add_executor_job(
-                        fetch_chefkoch_random_recipies, hass, self
+                        fetch_chefkoch_daily_recipies_backe, hass, self
                     )
                 recipes_count = len(data)
 
