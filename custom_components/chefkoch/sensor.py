@@ -13,7 +13,6 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.typing import (
     ConfigType,
-    HomeAssistantType,
     DiscoveryInfoType,
 )
 import voluptuous as vol
@@ -29,7 +28,7 @@ _LOGGER = logging.getLogger(__name__)
 SCAN_INTERVAL = timedelta(minutes=2)
 
 async def async_setup_entry(
-    hass: HomeAssistantType, entry: ConfigType, async_add_entities: AddEntitiesCallback
+    hass: core.HomeAssistant, entry: ConfigType, async_add_entities: AddEntitiesCallback
 ):
     """Setup sensors from a config entry created in the integrations UI."""
     config = hass.data[DOMAIN][entry.entry_id]
@@ -105,15 +104,15 @@ class ChefkochSensorBase(SensorEntity):
             _LOGGER.exception(f"Cannot retrieve data for '{self._name}': {e}")
 
 class ChefkochSensorDaily(ChefkochSensorBase):
-    def __init__(self, config, hass: HomeAssistantType):
+    def __init__(self, config, hass: core.HomeAssistant):
         super().__init__("Chefkoch daily recommendations", fetch_chefkoch_daily_recipes)
 
 class ChefkochSensorRandom(ChefkochSensorBase):
-    def __init__(self, config, hass: HomeAssistantType):
+    def __init__(self, config, hass: core.HomeAssistant):
         super().__init__("Chefkoch random recommendations", fetch_chefkoch_random_recipes)
 
 class ChefkochSensorDailyBacke(ChefkochSensorBase):
-    def __init__(self, config, hass: HomeAssistantType):
+    def __init__(self, config, hass: core.HomeAssistant):
         super().__init__("Chefkoch daily backe recommendations", fetch_chefkoch_daily_recipes_backe)
 
 def fetch_chefkoch_daily_recipes():
