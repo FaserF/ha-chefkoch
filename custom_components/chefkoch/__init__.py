@@ -35,19 +35,19 @@ async def async_setup_entry(
 
     config = hass.data[DOMAIN][entry.entry_id]
     async def async_update_data():
-        """Fetch data from Foodsharing."""
+        """Fetch data from Chefkoch."""
         async with async_timeout.timeout(scan_interval - 1):
             await hass.async_add_executor_job(lambda: data.update())
 
             if not data.state:
-                raise UpdateFailed(f"Error fetching {entry.title} Rewe state")
+                raise UpdateFailed(f"Error fetching {entry.title} Chefkoch state")
 
             return data.state
 
     coordinator = DataUpdateCoordinator(
         hass,
         _LOGGER,
-        name=f"{entry.title} Rewe state",
+        name=f"{entry.title} Chefkoch state",
         update_method=async_update_data,
     )
 

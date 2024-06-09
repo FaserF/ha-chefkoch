@@ -12,7 +12,7 @@
     "python_chefkoch"
   ],
   "requirements": [
-    "python_chefkoch==1.0.0"
+    "python_chefkoch==2.0.0"
   ],
   "version": "1.0.0"
 }
