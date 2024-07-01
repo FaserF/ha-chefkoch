@@ -4,12 +4,11 @@ import logging
 from datetime import timedelta
 
 from homeassistant import config_entries, core
-
 from homeassistant.helpers.update_coordinator import (
-    CoordinatorEntity,
     DataUpdateCoordinator,
     UpdateFailed,
 )
+import async_timeout
 
 from .const import DOMAIN
 
@@ -20,35 +19,42 @@ async def async_setup_entry(
     hass: core.HomeAssistant, entry: config_entries.ConfigEntry
 ) -> bool:
     """Set up platform from a ConfigEntry."""
+    _LOGGER.debug("Setting up Chefkoch entry")
+
     hass.data.setdefault(DOMAIN, {})
     hass_data = dict(entry.data)
+
     # Registers update listener to update config entry when options are updated.
     unsub_options_update_listener = entry.add_update_listener(options_update_listener)
-    # Store a reference to the unsubscribe function to cleanup if an entry is unloaded.
     hass_data["unsub_options_update_listener"] = unsub_options_update_listener
-    hass.data[DOMAIN][entry.entry_id] = hass_data
 
-    # Forward the setup to the sensor platform.
-    hass.async_create_task(
-        hass.config_entries.async_forward_entry_setup(entry, "sensor")
-    )
-
-    config = hass.data[DOMAIN][entry.entry_id]
     async def async_update_data():
         """Fetch data from Chefkoch."""
-        async with async_timeout.timeout(scan_interval - 1):
-            await hass.async_add_executor_job(lambda: data.update())
-
-            if not data.state:
-                raise UpdateFailed(f"Error fetching {entry.title} Chefkoch state")
-
-            return data.state
+        try:
+            async with async_timeout.timeout(SCAN_INTERVAL.total_seconds() - 1):
+                # Replace this with your actual data fetch logic
+                data = {"some_key": "value", "attribute_1": "value1", "attribute_2": "value2"}
+                return data
+        except Exception as err:
+            raise UpdateFailed(f"Error fetching data: {err}")
 
     coordinator = DataUpdateCoordinator(
         hass,
         _LOGGER,
         name=f"{entry.title} Chefkoch state",
         update_method=async_update_data,
+        update_interval=SCAN_INTERVAL,
+    )
+
+    # Fetch initial data
+    await coordinator.async_config_entry_first_refresh()
+
+    hass_data["coordinator"] = coordinator
+    hass.data[DOMAIN][entry.entry_id] = hass_data
+
+    # Forward the setup to the sensor platform.
+    hass.async_create_task(
+        hass.config_entries.async_forward_entry_setup(entry, "sensor")
     )
 
     return True
@@ -60,23 +66,14 @@ async def options_update_listener(
     """Handle options update."""
     await hass.config_entries.async_reload(config_entry.entry_id)
 
-async def async_update(self):
-    """Async wrapper for update method."""
-    return await self._hass.async_add_executor_job(self._update)
 
 async def async_unload_entry(
     hass: core.HomeAssistant, entry: config_entries.ConfigEntry
 ) -> bool:
     """Unload a config entry."""
-    unload_ok = all(
-        await asyncio.gather(
-            *[hass.config_entries.async_forward_entry_unload(entry, "sensor")]
-        )
-    )
-    # Remove options_update_listener.
+    unload_ok = await hass.config_entries.async_forward_entry_unload(entry, "sensor")
     hass.data[DOMAIN][entry.entry_id]["unsub_options_update_listener"]()
 
-    # Remove config entry from domain.
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id)
 
