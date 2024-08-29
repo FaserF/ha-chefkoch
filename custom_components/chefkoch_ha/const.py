@@ -2,7 +2,7 @@
 DOMAIN = "chefkoch_ha"
 
 SENSOR_TYPES = {
-    "random": "Random Recipe",
-    "daily": "Daily Recipe",
-    "vegan": "Vegan Recipe",
+    "random": "Chefkoch Random Recipe",
+    "daily": "Chefkoch Daily Recipe",
+    "vegan": "Chefkoch Vegan Recipe",
 }
