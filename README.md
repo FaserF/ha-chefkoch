@@ -45,13 +45,21 @@ action:
       message: >
         Here's a random recipe for you today! 🎉
         
-        **Recipe:** {{ state_attr('sensor.chefkoch_random_recipe', 'title') }}
+        **Recipe:** {{ states.sensor.chefkoch_random_recipe.state }}
+
+
         **URL:** {{ state_attr('sensor.chefkoch_random_recipe', 'url') }}
+
         **Image:** {{ state_attr('sensor.chefkoch_random_recipe', 'image_url') }}
+
         **Preparation Time:** {{ state_attr('sensor.chefkoch_random_recipe', 'totalTime') }}
+
         **Ingredients:** {{ state_attr('sensor.chefkoch_random_recipe', 'ingredients') | join(', ') }}
+
         **Calories:** {{ state_attr('sensor.chefkoch_random_recipe', 'calories') }}
+
         **Category:** {{ state_attr('sensor.chefkoch_random_recipe', 'category') }}
+        
       title: "Recipe of the Day"
 
 ```
