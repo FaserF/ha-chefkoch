@@ -22,9 +22,10 @@ class ChefkochSensor(CoordinatorEntity, SensorEntity):
     def __init__(self, coordinator, sensor_type):
         """Initialize the sensor."""
         super().__init__(coordinator)
-        self._attr_name = SENSOR_TYPES[sensor_type]
         self._sensor_type = sensor_type
+        self._attr_name = SENSOR_TYPES[sensor_type]
         self._attr_icon = "mdi:chef-hat"
+        self._attr_unique_id = f"{sensor_type}"  # Unique ID for each sensor
 
     @property
     def state(self):
