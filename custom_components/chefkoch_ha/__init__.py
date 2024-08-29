@@ -78,17 +78,37 @@ async def async_setup_entry(
                     def extract_recipe_attributes(recipe_url):
                         """Extract attributes from the recipe using a separate thread."""
                         if recipe_url:
-                            recipe = Recipe(recipe_url)
-                            return {
-                                "title": recipe.title,
-                                "url": recipe_url,
-                                "image_url": recipe.image_url,
-                                "totalTime": str(recipe.total_time),
-                                "ingredients": recipe.ingredients,
-                                "calories": recipe.calories,
-                                "category": recipe.category,
-                            }
-                        return {}
+                            try:
+                                recipe = Recipe(recipe_url)
+                                return {
+                                    "title": recipe.title,
+                                    "url": recipe_url,
+                                    "image_url": recipe.image_url if recipe.image_url else "",
+                                    "totalTime": str(recipe.total_time) if recipe.total_time else "",
+                                    "ingredients": recipe.ingredients if recipe.ingredients else [],
+                                    "calories": recipe.calories if recipe.calories else "",
+                                    "category": recipe.category if recipe.category else "",
+                                }
+                            except Exception as e:
+                                _LOGGER.error("Error extracting recipe attributes: %s", e, exc_info=True)
+                                return {
+                                    "title": "Unknown",
+                                    "url": recipe_url,
+                                    "image_url": "",
+                                    "totalTime": "",
+                                    "ingredients": [],
+                                    "calories": "",
+                                    "category": "",
+                                }
+                        return {
+                            "title": "Unknown",
+                            "url": recipe_url,
+                            "image_url": "",
+                            "totalTime": "",
+                            "ingredients": [],
+                            "calories": "",
+                            "category": "",
+                        }
 
                     # Run recipe extraction in a separate thread
                     random_attributes = await asyncio.to_thread(
