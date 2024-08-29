@@ -41,18 +41,27 @@ async def async_setup_entry(
                     daily_retriever = DailyRecipeRetriever()
                     vegan_retriever = SearchRetriever(health=["Vegan"])
 
-                    # Fetch data using asyncio.to_thread to avoid blocking
-                    _LOGGER.debug("Fetching random recipe...")
-                    random_recipe = await asyncio.to_thread(random_retriever.get_recipe)
-                    _LOGGER.debug("random_recipe retrieved: %s", random_recipe)
+                    _LOGGER.debug("Fetching all recipes concurrently...")
 
-                    _LOGGER.debug("Fetching daily recipes...")
-                    daily_recipes = await asyncio.to_thread(daily_retriever.get_recipes, type="kochen")
-                    _LOGGER.debug("daily_recipes retrieved: %s", daily_recipes)
+                    # Use asyncio to run the fetches concurrently
+                    random_recipe_task = asyncio.to_thread(random_retriever.get_recipe)
+                    daily_recipes_task = asyncio.to_thread(daily_retriever.get_recipes, type="kochen")
+                    vegan_recipes_task = asyncio.to_thread(vegan_retriever.get_recipes, search_query="vegan")
 
-                    _LOGGER.debug("Fetching vegan recipes...")
-                    vegan_recipes = await asyncio.to_thread(vegan_retriever.get_recipes, search_query="vegan")
-                    _LOGGER.debug("vegan_recipes retrieved: %s", vegan_recipes)
+                    # Gather results from all tasks
+                    random_recipe, daily_recipes, vegan_recipes = await asyncio.gather(
+                        random_recipe_task,
+                        daily_recipes_task,
+                        vegan_recipes_task
+                    )
+
+                    # Log the results after all tasks are completed
+                    _LOGGER.debug(
+                        "random_recipe retrieved: %s\ndaily_recipes retrieved: %s\nvegan_recipes retrieved: %s", 
+                        random_recipe,
+                        daily_recipes,
+                        vegan_recipes
+                    )
 
                     # Logging to understand the content of random_recipe
                     if random_recipe is None:
@@ -90,20 +99,26 @@ async def async_setup_entry(
                             }
                         return {}
 
-                    # Run recipe extraction in a separate thread
-                    random_attributes = await asyncio.to_thread(
+                    # Use asyncio to run recipe extraction concurrently
+                    random_attributes_task = asyncio.to_thread(
                         extract_recipe_attributes, get_recipe_url(selected_random_recipe)
                     )
-                    daily_attributes = await asyncio.to_thread(
+                    daily_attributes_task = asyncio.to_thread(
                         extract_recipe_attributes, get_recipe_url(selected_daily_recipe)
                     )
-                    vegan_attributes = await asyncio.to_thread(
+                    vegan_attributes_task = asyncio.to_thread(
                         extract_recipe_attributes, get_recipe_url(selected_vegan_recipe)
                     )
 
-                    _LOGGER.debug("Extracted random_attributes: %s", random_attributes)
-                    _LOGGER.debug("Extracted daily_attributes: %s", daily_attributes)
-                    _LOGGER.debug("Extracted vegan_attributes: %s", vegan_attributes)
+                    # Gather results from all tasks
+                    random_attributes, daily_attributes, vegan_attributes = await asyncio.gather(
+                        random_attributes_task,
+                        daily_attributes_task,
+                        vegan_attributes_task
+                    )
+
+                    # Log the results after all tasks are completed
+                    _LOGGER.debug("Extracted random_attributes: %s\nExtracted daily_attributes: %s\nExtracted vegan_attributes: %s", random_attributes, daily_attributes, vegan_attributes)
 
                     # Prepare the data dictionary
                     data = {
@@ -149,9 +164,10 @@ async def async_setup_entry(
         ),
     }
 
-    # Fetch initial data
-    for coordinator in coordinators.values():
-        await coordinator.async_config_entry_first_refresh()
+    # Use asyncio to run the coordinators concurrently
+    coordinator_tasks = [coordinator.async_config_entry_first_refresh() for coordinator in coordinators.values()]
+    # Gather results from all tasks
+    await asyncio.gather(*coordinator_tasks)
 
     # Add coordinators to hass data
     hass_data["coordinator_random"] = coordinators["random"]
