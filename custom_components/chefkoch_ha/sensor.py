@@ -24,6 +24,7 @@ class ChefkochSensor(CoordinatorEntity, SensorEntity):
         super().__init__(coordinator)
         self._attr_name = SENSOR_TYPES[sensor_type]
         self._sensor_type = sensor_type
+        self._attr_icon = "mdi:chef-hat"
 
     @property
     def state(self):
@@ -38,7 +39,10 @@ class ChefkochSensor(CoordinatorEntity, SensorEntity):
         data = self.coordinator.data.get(self._sensor_type, {})
         _LOGGER.debug("Sensor state attributes: %s", data)
         return {
+            "url": data.get("url", ""),
             "image_url": data.get("image_url", ""),
+            "totalTime": data.get("totalTime", ""),
+            "ingredients": data.get("ingredients", ""),
             "calories": data.get("calories", ""),
             "difficulty": data.get("difficulty", ""),
             "ingredients": data.get("ingredients", []),
