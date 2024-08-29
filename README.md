@@ -1,8 +1,6 @@
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
 # Chefkoch Homeassistant Sensor
-The `chefkoch` sensor will give you the daily top reciepe from chefkoch.
-
-PLEASE NOTE: NOT WORKING YET - work in progress!
+The `chefkoch_ha` sensor will give you random reciepes from chefkoch.
 
 ## Installation
 ### 1. Using HACS (recommended way)
@@ -35,10 +33,13 @@ To enable debugging enter the following in your configuration.yaml
 ```yaml
 logger:
     logs:
-        custom_components.chefkoch: debug
+        custom_components.chefkoch_ha: debug
 ```
 
 You can then find the log in the HA settings -> System -> Logs -> Enter "chefkoch" in the search bar -> "Load full logs"
+
+## Why is it called chefkoch_ha and not chefkoch?
+Due to the problem, that the corresponding python module is also called "chefkoch", this integration will fail to load some dependencies, when both the integration and the python module are called the same. 
 
 ## Thanks to
 Huge thanks to [@THDMoritzEnderle](https://github.com/THDMoritzEnderle/chefkoch) for the chefkoch python library that this integration is using.
