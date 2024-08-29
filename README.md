@@ -25,6 +25,37 @@ where `<config>` is your Home Assistant configuration directory.
 
 Go to Configuration -> Integrations and click on "add integration". Then search for "Chefkoch".
 
+## Accessing the data
+There will be three new sensors after adding it via HA: 
+- sensor.chefkoch_random_recipe: Random recipe
+- sensor.chefkoch_daily_recipe: Daily recipe recommendation from chefkoch
+- sensor.chefkoch_vegan_recipe: Vegan recipe
+
+### Automations
+```yaml
+alias: "Daily Random Recipe"
+description: "Sends a daily random recipe message with attribute details."
+mode: single
+trigger:
+  - platform: time
+    at: "09:00:00"
+action:
+  - service: notify.notify
+    data:
+      message: >
+        Here's a random recipe for you today! 🎉
+        
+        **Recipe:** {{ state_attr('sensor.chefkoch_random_recipe', 'title') }}
+        **URL:** {{ state_attr('sensor.chefkoch_random_recipe', 'url') }}
+        **Image:** {{ state_attr('sensor.chefkoch_random_recipe', 'image_url') }}
+        **Preparation Time:** {{ state_attr('sensor.chefkoch_random_recipe', 'totalTime') }}
+        **Ingredients:** {{ state_attr('sensor.chefkoch_random_recipe', 'ingredients') | join(', ') }}
+        **Calories:** {{ state_attr('sensor.chefkoch_random_recipe', 'calories') }}
+        **Category:** {{ state_attr('sensor.chefkoch_random_recipe', 'category') }}
+      title: "Recipe of the Day"
+
+```
+
 ## Bug reporting
 Open an issue over at [github issues](https://github.com/FaserF/ha-chefkoch/issues). Please prefer sending over a log with debugging enabled.
 
