@@ -15,7 +15,7 @@ from .const import DOMAIN
 _LOGGER = logging.getLogger(__name__)
 SCAN_INTERVAL = timedelta(days=1)
 
-# Executor für die Ausführung synchroner Code-Teile in einem separaten Thread
+# Executor for running synchronous code in a separate thread
 executor = ThreadPoolExecutor()
 
 async def async_setup_entry(
@@ -82,7 +82,7 @@ async def async_setup_entry(
 
                     def get_recipe_url(recipe):
                         """Get recipe URL safely."""
-                        return recipe.url if hasattr(recipe, 'url') else ""
+                        return recipe.url if hasattr(recipe, 'url') and recipe.url else ""
 
                     def extract_recipe_attributes(recipe_url):
                         """Extract attributes from the recipe using a separate thread."""
@@ -90,9 +90,9 @@ async def async_setup_entry(
                             try:
                                 recipe = Recipe(recipe_url)
                                 return {
-                                    "title": recipe.title,
-                                    "url": recipe_url,
-                                    "image_url": recipe.image_url if recipe.image_url else "",
+                                    "title": recipe.title or "Unknown",
+                                    "url": recipe_url or "",
+                                    "image_url": recipe.image_url if recipe.image_url is not None else "",
                                     "totalTime": str(recipe.total_time) if recipe.total_time else "",
                                     "ingredients": recipe.ingredients if recipe.ingredients else [],
                                     "calories": recipe.calories if recipe.calories else "",
@@ -102,7 +102,7 @@ async def async_setup_entry(
                                 _LOGGER.error("Error extracting recipe attributes: %s", e, exc_info=True)
                                 return {
                                     "title": "Unknown",
-                                    "url": recipe_url,
+                                    "url": recipe_url or "",
                                     "image_url": "",
                                     "totalTime": "",
                                     "ingredients": [],
@@ -111,7 +111,7 @@ async def async_setup_entry(
                                 }
                         return {
                             "title": "Unknown",
-                            "url": recipe_url,
+                            "url": recipe_url or "",
                             "image_url": "",
                             "totalTime": "",
                             "ingredients": [],
