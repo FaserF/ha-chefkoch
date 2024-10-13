@@ -116,7 +116,7 @@ async def async_setup_entry(
                             "totalTime": "",
                             "ingredients": [],
                             "calories": "",
-                            "category": "",
+                            "category": "", 
                         }
 
                     # Use asyncio to run recipe extraction concurrently
