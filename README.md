@@ -5,9 +5,11 @@ The `chefkoch_ha` sensor will give you random reciepes from chefkoch.
 ## Installation
 ### 1. Using HACS (recommended way)
 
-This integration will be a official HACS Integration, once it is fully working.
+This integration is NO official HACS Integration right now.
 
-Open HACS then install the "Chefkoch" integration.
+Open HACS then install the "chefkoch" integration or use the link below.
+
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=FaserF&repository=ha-chefkoch&category=integration)
 
 If you use this method, your component will always update to the latest version.
 
@@ -26,7 +28,7 @@ where `<config>` is your Home Assistant configuration directory.
 Go to Configuration -> Integrations and click on "add integration". Then search for "Chefkoch".
 
 ## Accessing the data
-There will be three new sensors after adding it via HA: 
+There will be three new sensors after adding it via HA:
 - sensor.chefkoch_random_recipe: Random recipe
 - sensor.chefkoch_daily_recipe: Daily recipe recommendation from chefkoch
 - sensor.chefkoch_vegan_recipe: Vegan recipe
@@ -44,7 +46,7 @@ action:
     data:
       message: >
         Here's a random recipe for you today! 🎉
-        
+
         **Recipe:** {{ states.sensor.chefkoch_random_recipe.state }}
 
 
@@ -59,7 +61,7 @@ action:
         **Calories:** {{ state_attr('sensor.chefkoch_random_recipe', 'calories') }}
 
         **Category:** {{ state_attr('sensor.chefkoch_random_recipe', 'category') }}
-        
+
       title: "Recipe of the Day"
 
 ```
@@ -78,7 +80,7 @@ logger:
 You can then find the log in the HA settings -> System -> Logs -> Enter "chefkoch" in the search bar -> "Load full logs"
 
 ## Why is it called chefkoch_ha and not chefkoch?
-Due to the problem, that the corresponding python module is also called "chefkoch", this integration will fail to load some dependencies, when both the integration and the python module are called the same. 
+Due to the problem, that the corresponding python module is also called "chefkoch", this integration will fail to load some dependencies, when both the integration and the python module are called the same.
 
 ## Thanks to
 Huge thanks to [@THDMoritzEnderle](https://github.com/THDMoritzEnderle/chefkoch) for the chefkoch python library that this integration is using.
