@@ -57,7 +57,7 @@ async def async_setup_entry(
 
                     # Log the results after all tasks are completed
                     _LOGGER.debug(
-                        "random_recipe retrieved: %s\ndaily_recipes retrieved: %s\nvegan_recipes retrieved: %s", 
+                        "random_recipe retrieved: %s\ndaily_recipes retrieved: %s\nvegan_recipes retrieved: %s",
                         random_recipe,
                         daily_recipes,
                         vegan_recipes
@@ -86,38 +86,68 @@ async def async_setup_entry(
 
                     def extract_recipe_attributes(recipe_url):
                         """Extract attributes from the recipe using a separate thread."""
-                        if recipe_url:
-                            try:
-                                recipe = Recipe(recipe_url)
-                                return {
-                                    "title": recipe.title or "Unknown",
-                                    "url": recipe_url or "",
-                                    "image_url": recipe.image_url if recipe.image_url is not None else "",
-                                    "totalTime": str(recipe.total_time) if recipe.total_time else "",
-                                    "ingredients": recipe.ingredients if recipe.ingredients else [],
-                                    "calories": recipe.calories if recipe.calories else "",
-                                    "category": recipe.category if recipe.category else "",
-                                }
-                            except Exception as e:
-                                _LOGGER.error("Error extracting recipe attributes: %s", e, exc_info=True)
-                                return {
-                                    "title": "Unknown",
-                                    "url": recipe_url or "",
-                                    "image_url": "",
-                                    "totalTime": "",
-                                    "ingredients": [],
-                                    "calories": "",
-                                    "category": "",
-                                }
-                        return {
+                        result = {
                             "title": "Unknown",
                             "url": recipe_url or "",
                             "image_url": "",
                             "totalTime": "",
                             "ingredients": [],
                             "calories": "",
-                            "category": "", 
+                            "category": "",
+                            "status": "success",
                         }
+
+                        if not recipe_url:
+                            result["status"] = "error"
+                            result["error_message"] = "No recipe URL provided"
+                            return result
+
+                        try:
+                            recipe = Recipe(recipe_url)
+                            errors = []
+
+                            try:
+                                result["title"] = recipe.title or "Unknown"
+                            except Exception as e:
+                                errors.append(f"title: {e}")
+
+                            result["url"] = recipe_url
+
+                            try:
+                                result["image_url"] = recipe.image_url or ""
+                            except Exception as e:
+                                errors.append(f"image_url: {e}")
+
+                            try:
+                                result["totalTime"] = str(recipe.total_time) or ""
+                            except Exception as e:
+                                errors.append(f"totalTime: {e}")
+
+                            try:
+                                result["ingredients"] = recipe.ingredients or []
+                            except Exception as e:
+                                errors.append(f"ingredients: {e}")
+
+                            try:
+                                result["calories"] = recipe.calories or ""
+                            except Exception as e:
+                                errors.append(f"calories: {e}")
+
+                            try:
+                                result["category"] = recipe.category or ""
+                            except Exception as e:
+                                errors.append(f"category: {e}")
+
+                            if errors:
+                                result["status"] = "error"
+                                result["error_message"] = "; ".join(errors)
+
+                        except Exception as e:
+                            _LOGGER.error("Recipe object could not be created: %s", e, exc_info=True)
+                            result["status"] = "error"
+                            result["error_message"] = f"Failed to create recipe object: {e}"
+
+                        return result
 
                     # Use asyncio to run recipe extraction concurrently
                     random_attributes_task = asyncio.to_thread(
