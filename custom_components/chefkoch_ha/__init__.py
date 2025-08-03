@@ -84,16 +84,27 @@ async def async_setup_entry(
                         """Get recipe URL safely."""
                         return recipe.url if hasattr(recipe, 'url') and recipe.url else ""
 
+                    def safe_get_attr(obj, attr, default=None):
+                        """Try to get an attribute from obj, catch all exceptions."""
+                        try:
+                            value = getattr(obj, attr)
+                            if callable(value):
+                                return value()
+                            return value
+                        except Exception as e:
+                            _LOGGER.debug(f"Failed to get attribute {attr}: {e}", exc_info=True)
+                            return default
+
                     def extract_recipe_attributes(recipe_url):
-                        """Extract attributes from the recipe using a separate thread."""
                         result = {
                             "title": "Unknown",
                             "url": recipe_url or "",
                             "image_url": "",
-                            "totalTime": "",
+                            "total_time": 0,   # Default fallback as int 0
                             "ingredients": [],
                             "calories": "",
                             "category": "",
+                            "difficulty": "",
                             "status": "success",
                         }
 
@@ -104,46 +115,80 @@ async def async_setup_entry(
 
                         try:
                             recipe = Recipe(recipe_url)
+
+                            # Log all available attributes and their values safely, with special treatment for image_base64
+                            available_attrs = [attr for attr in dir(recipe) if not attr.startswith("_")]
+                            all_attr_values = {}
+                            for attr in available_attrs:
+                                val = safe_get_attr(recipe, attr, default="N/A")
+                                if attr == "image_base64":
+                                    if isinstance(val, (bytes, bytearray)) and len(val) > 0:
+                                        val = val[:4].hex() + "..."  # first 4 bytes hex + ...
+                                    else:
+                                        val = "empty"
+                                all_attr_values[attr] = val
+                            _LOGGER.debug(f"All available attributes for recipe {recipe_url}: {all_attr_values}")
+
                             errors = []
 
-                            try:
-                                result["title"] = recipe.title or "Unknown"
-                            except Exception as e:
-                                errors.append(f"title: {e}")
+                            # title
+                            title = safe_get_attr(recipe, "title", default=None)
+                            if title:
+                                result["title"] = title
+                            else:
+                                errors.append("title missing or error")
 
-                            result["url"] = recipe_url
+                            # image_url
+                            image_url = safe_get_attr(recipe, "image_url", default=None)
+                            if image_url:
+                                result["image_url"] = image_url
+                            else:
+                                errors.append("image_url missing or error")
 
-                            try:
-                                result["image_url"] = recipe.image_url or ""
-                            except Exception as e:
-                                errors.append(f"image_url: {e}")
+                            # total_time with fallback
+                            total_time = safe_get_attr(recipe, "total_time", default=None)
+                            if not total_time or total_time == "N/A":
+                                total_time = safe_get_attr(recipe, "cook_time", default=None)
+                            if not total_time or total_time == "N/A":
+                                total_time = safe_get_attr(recipe, "prep_time", default=None)
+                            if not total_time or total_time == "N/A":
+                                total_time = 0
+                            result["total_time"] = total_time
 
-                            try:
-                                result["totalTime"] = str(recipe.total_time) or ""
-                            except Exception as e:
-                                errors.append(f"totalTime: {e}")
+                            # ingredients
+                            ingredients = safe_get_attr(recipe, "ingredients", default=None)
+                            if ingredients is not None:
+                                result["ingredients"] = ingredients
+                            else:
+                                errors.append("ingredients missing or error")
 
-                            try:
-                                result["ingredients"] = recipe.ingredients or []
-                            except Exception as e:
-                                errors.append(f"ingredients: {e}")
+                            # calories
+                            calories = safe_get_attr(recipe, "calories", default=None)
+                            if calories:
+                                result["calories"] = calories
+                            else:
+                                errors.append("calories missing or error")
 
-                            try:
-                                result["calories"] = recipe.calories or ""
-                            except Exception as e:
-                                errors.append(f"calories: {e}")
+                            # category
+                            category = safe_get_attr(recipe, "category", default=None)
+                            if category:
+                                result["category"] = category
+                            else:
+                                errors.append("category missing or error")
 
-                            try:
-                                result["category"] = recipe.category or ""
-                            except Exception as e:
-                                errors.append(f"category: {e}")
+                            # difficulty
+                            difficulty = safe_get_attr(recipe, "difficulty", default=None)
+                            if difficulty:
+                                result["difficulty"] = difficulty
+                            else:
+                                errors.append("difficulty missing or error")
 
                             if errors:
                                 result["status"] = "error"
                                 result["error_message"] = "; ".join(errors)
 
                         except Exception as e:
-                            _LOGGER.error("Recipe object could not be created: %s", e, exc_info=True)
+                            _LOGGER.error(f"Recipe object could not be created for URL {recipe_url}: {e}", exc_info=True)
                             result["status"] = "error"
                             result["error_message"] = f"Failed to create recipe object: {e}"
 
