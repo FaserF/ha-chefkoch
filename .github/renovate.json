@@ -9,7 +9,7 @@
         "/manifest.json$"
       ],
       "matchStrings": [
-        "python_chefkoch==?(?<currentValue>.+?)[\"']?\\s+"
+        "python-chefkoch==?(?<currentValue>.+?)[\"']?\\s+"
       ],
       "datasourceTemplate": "pypi",
       "depNameTemplate": "python_chefkoch"
