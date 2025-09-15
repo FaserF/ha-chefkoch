@@ -1,6 +1,12 @@
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
 # Chefkoch Homeassistant Sensor
-The `chefkoch_ha` sensor will give you random reciepes from chefkoch.
+The `chefkoch_ha` sensor will give you random reciepes from chefkoch. It automatically updates once a day. But you can update it by a automation more often.
+
+```yaml
+- service: homeassistant.reload_config_entry
+      data:
+        entry_id: 01J6EXEW32EBEDF3WV4VC0DA3C
+```
 
 ## Installation
 ### 1. Using HACS (recommended way)
