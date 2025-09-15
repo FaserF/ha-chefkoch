@@ -42,8 +42,8 @@ class ChefkochSensor(CoordinatorEntity, SensorEntity):
         return {
             "url": data.get("url", ""),
             "image_url": data.get("image_url", ""),
-            "totalTime": data.get("totalTime", ""),
-            "calories": data.get("calories", ""),
+            "totalTime": data.get("totalTime"),
+            "calories": data.get("calories"),
             "difficulty": data.get("difficulty", ""),
             "ingredients": data.get("ingredients", []),
             "category": data.get("category", ""),

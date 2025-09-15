@@ -100,9 +100,9 @@ async def async_setup_entry(
                             "title": "Unknown",
                             "url": recipe_url or "",
                             "image_url": "",
-                            "total_time": 0,   # Default fallback as int 0
+                            "totalTime": 0,
                             "ingredients": [],
-                            "calories": "",
+                            "calories": None,
                             "category": "",
                             "difficulty": "",
                             "status": "success",
@@ -145,7 +145,7 @@ async def async_setup_entry(
                             else:
                                 errors.append("image_url missing or error")
 
-                            # total_time with fallback
+                            # totalTime with fallback
                             total_time = safe_get_attr(recipe, "total_time", default=None)
                             if not total_time or total_time == "N/A":
                                 total_time = safe_get_attr(recipe, "cook_time", default=None)
@@ -153,7 +153,7 @@ async def async_setup_entry(
                                 total_time = safe_get_attr(recipe, "prep_time", default=None)
                             if not total_time or total_time == "N/A":
                                 total_time = 0
-                            result["total_time"] = total_time
+                            result["totalTime"] = total_time
 
                             # ingredients
                             ingredients = safe_get_attr(recipe, "ingredients", default=None)
@@ -164,10 +164,10 @@ async def async_setup_entry(
 
                             # calories
                             calories = safe_get_attr(recipe, "calories", default=None)
-                            if calories:
+                            if calories and str(calories).strip():
                                 result["calories"] = calories
                             else:
-                                errors.append("calories missing or error")
+                                result["calories"] = None
 
                             # category
                             category = safe_get_attr(recipe, "category", default=None)
