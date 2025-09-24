@@ -1,16 +1,59 @@
 {
   "config": {
-    "flow_title": "Einrichtung der Chefkoch Integration",
     "step": {
       "user": {
-        "description": "Hiermit aktivierst du die Chefkoch Integration"
+        "title": "Chefkoch einrichten",
+        "description": "Hiermit wird die Chefkoch-Integration eingerichtet. Rezept-Sensoren können im nächsten Schritt unter 'Optionen' hinzugefügt und konfiguriert werden."
       }
     },
     "abort": {
-      "already_configured": "Die Chefkoch Integration ist bereits konfiguriert."
+      "single_instance_allowed": "Es ist nur eine einzelne Instanz der Chefkoch-Integration erlaubt."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Chefkoch-Sensoren verwalten",
+        "menu": {
+          "add_defaults": "Standard-Sensoren hinzufügen (Zufall, Täglich, Vegan)",
+          "add_sensor": "Neuen Rezept-Sensor hinzufügen",
+          "edit_sensor": "Bestehenden Sensor bearbeiten",
+          "remove_sensor": "Sensor entfernen"
+        }
+      },
+      "add_sensor": {
+        "title": "Neuen Sensor hinzufügen",
+        "data": {
+          "name": "Sensorname",
+          "search_query": "Suchbegriff (z.B. 'Pasta')",
+          "category": "Kategorie",
+          "difficulty": "Schwierigkeit"
+        }
+      },
+      "edit_sensor": {
+        "title": "Sensor zum Bearbeiten auswählen",
+        "data": {
+          "sensor_id": "Sensor"
+        }
+      },
+      "edit_sensor_form": {
+        "title": "Sensor bearbeiten",
+        "data": {
+          "name": "Sensorname",
+          "search_query": "Suchbegriff",
+          "category": "Kategorie",
+          "difficulty": "Schwierigkeit"
+        }
+      },
+      "remove_sensor": {
+        "title": "Sensoren entfernen",
+        "data": {
+          "sensors_to_remove": "Sensoren zum Entfernen auswählen"
+        }
+      }
     },
-    "error": {
-      "unknown": "Unbekannter Fehler"
+    "abort": {
+      "no_sensors": "Es sind keine Sensoren zum Bearbeiten oder Entfernen vorhanden."
     }
   }
 }

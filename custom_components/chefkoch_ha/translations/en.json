@@ -1,16 +1,59 @@
 {
   "config": {
-    "flow_title": "Setup Chefkoch Integration",
     "step": {
       "user": {
-        "description": "This enables the chefkoch integration"
+        "title": "Chefkoch Setup",
+        "description": "This will set up the main Chefkoch integration. You can add and configure recipe sensors in the next step under 'Options'."
       }
     },
     "abort": {
-      "already_configured": "The chefkoch integration is already configured"
+      "single_instance_allowed": "Only a single instance of the Chefkoch integration is allowed."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Manage Chefkoch Sensors",
+        "menu": {
+          "add_defaults": "Add Default Sensors (Random, Daily, Vegan)",
+          "add_sensor": "Add a new Recipe Sensor",
+          "edit_sensor": "Edit an existing Sensor",
+          "remove_sensor": "Remove a Sensor"
+        }
+      },
+      "add_sensor": {
+        "title": "Add New Sensor",
+        "data": {
+          "name": "Sensor Name",
+          "search_query": "Search Term (e.g., 'Pasta')",
+          "category": "Category",
+          "difficulty": "Difficulty"
+        }
+      },
+      "edit_sensor": {
+        "title": "Select Sensor to Edit",
+        "data": {
+          "sensor_id": "Sensor"
+        }
+      },
+      "edit_sensor_form": {
+        "title": "Edit Sensor",
+        "data": {
+          "name": "Sensor Name",
+          "search_query": "Search Term",
+          "category": "Category",
+          "difficulty": "Difficulty"
+        }
+      },
+      "remove_sensor": {
+        "title": "Remove Sensors",
+        "data": {
+          "sensors_to_remove": "Select sensors to remove"
+        }
+      }
     },
-    "error": {
-      "unknown": "Unknown Error"
+    "abort": {
+      "no_sensors": "There are no sensors to edit or remove."
     }
   }
 }
