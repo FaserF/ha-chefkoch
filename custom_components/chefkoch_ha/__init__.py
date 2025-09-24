@@ -41,48 +41,53 @@ async def async_update_data(hass: core.HomeAssistant, entry: config_entries.Conf
 async def _fetch_recipe_url(sensor_config: dict) -> str | None:
     """Fetch the recipe URL based on sensor config."""
     sensor_type = sensor_config["type"]
+    retriever = None
+    try:
+        if sensor_type == "random":
+            retriever = RandomRetriever()
+            recipe = await asyncio.to_thread(retriever.get_recipe)
+            return recipe.url if recipe else None
 
-    if sensor_type == "random":
-        retriever = RandomRetriever()
-        recipe = await asyncio.to_thread(retriever.get_recipe)
-        return recipe.url if recipe else None
+        elif sensor_type == "daily":
+            retriever = DailyRecipeRetriever()
+            recipes = await asyncio.to_thread(retriever.get_recipes, type="kochen")
+            return recipes[0].url if recipes and recipes[0] else None
 
-    elif sensor_type == "daily":
-        retriever = DailyRecipeRetriever()
-        recipes = await asyncio.to_thread(retriever.get_recipes, type="kochen")
-        return recipes[0].url if recipes and recipes[0] else None
+        elif sensor_type == "vegan":
+            retriever = SearchRetriever(health=["Vegan"])
+            recipes = await asyncio.to_thread(retriever.get_recipes, search_query="vegan")
+            return recipes[0].url if recipes and recipes[0] else None
 
-    elif sensor_type == "vegan":
-        retriever = SearchRetriever(health=["Vegan"])
-        recipes = await asyncio.to_thread(retriever.get_recipes, search_query="vegan")
-        return recipes[0].url if recipes and recipes[0] else None
+        elif sensor_type == "search":
+            search_query = sensor_config.get("search_query", "")
 
-    elif sensor_type == "search":
-        search_query = sensor_config.get("search_query", "")
+            # Helper to parse comma-separated strings into lists
+            def parse_list(key):
+                value = sensor_config.get(key, "")
+                return [item.strip() for item in value.split(',') if item.strip()] if value else None
 
-        # Helper to parse comma-separated strings into lists
-        def parse_list(key):
-            value = sensor_config.get(key, "")
-            return [item.strip() for item in value.split(',') if item.strip()] if value else None
+            init_params = {
+                "properties": parse_list("properties"),
+                "health": parse_list("health"),
+                "categories": parse_list("categories"),
+                "countries": parse_list("countries"),
+                "meal_type": parse_list("meal_type"),
+                "prep_times": sensor_config.get("prep_times"),
+                "ratings": sensor_config.get("ratings"),
+                "sort": sensor_config.get("sort")
+            }
 
-        init_params = {
-            "properties": parse_list("properties"),
-            "health": parse_list("health"),
-            "categories": parse_list("categories"),
-            "countries": parse_list("countries"),
-            "meal_type": parse_list("meal_type"),
-            "prep_times": sensor_config.get("prep_times"),
-            "ratings": sensor_config.get("ratings"),
-            "sort": sensor_config.get("sort")
-        }
+            init_params = {k: v for k, v in init_params.items() if v}
 
-        init_params = {k: v for k, v in init_params.items() if v}
+            retriever = SearchRetriever(**init_params)
+            recipes = await asyncio.to_thread(retriever.get_recipes, search_query=search_query)
+            return recipes[0].url if recipes and recipes[0] else None
 
-        retriever = SearchRetriever(**init_params)
-        recipes = await asyncio.to_thread(retriever.get_recipes, search_query=search_query)
-        return recipes[0].url if recipes and recipes[0] else None
+        return None
+    finally:
+        if retriever:
+            await asyncio.to_thread(retriever.close)
 
-    return None
 
 def extract_recipe_attributes(recipe_url):
     """Extract all attributes from a recipe URL robustly."""
