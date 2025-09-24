@@ -1,12 +1,8 @@
 import asyncio
 import logging
 from datetime import timedelta
-from concurrent.futures import ThreadPoolExecutor
-
 from homeassistant import config_entries, core
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-import async_timeout
-import aiohttp
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from chefkoch.retrievers import DailyRecipeRetriever, RandomRetriever, SearchRetriever
 from chefkoch import Recipe
 
@@ -15,186 +11,134 @@ from .const import DOMAIN
 _LOGGER = logging.getLogger(__name__)
 SCAN_INTERVAL = timedelta(days=1)
 
-# Executor for running synchronous code in a separate thread
-executor = ThreadPoolExecutor()
 
+async def async_update_data(hass: core.HomeAssistant, entry: config_entries.ConfigEntry):
+    """Fetch data from Chefkoch for all configured sensors."""
+    sensors = entry.options.get("sensors", [])
+    if not sensors:
+        return {}
 
-async def async_update_data(hass: core.HomeAssistant):
-    """Fetch data from Chefkoch."""
+    data = {}
+
+    async def fetch_and_process_sensor(sensor_config):
+        sensor_id = sensor_config["id"]
+        try:
+            recipe_url = await _fetch_recipe_url(sensor_config)
+            if recipe_url:
+                attributes = await hass.async_add_executor_job(extract_recipe_attributes, recipe_url)
+                data[sensor_id] = attributes
+            else:
+                _LOGGER.warning("No recipe found for sensor %s", sensor_config['name'])
+                data[sensor_id] = {"title": "No recipe found", "status": "error"}
+        except Exception as e:
+            _LOGGER.error("Error during data fetching for sensor %s: %s", sensor_config['name'], e, exc_info=True)
+            data[sensor_id] = {"title": "Error fetching URL", "status": "error", "error_message": str(e)}
+
+    tasks = [fetch_and_process_sensor(s) for s in sensors]
+    await asyncio.gather(*tasks)
+    return data
+
+async def _fetch_recipe_url(sensor_config: dict) -> str | None:
+    """Fetch the recipe URL based on sensor config."""
+    sensor_type = sensor_config["type"]
+
+    if sensor_type == "random":
+        retriever = RandomRetriever()
+        recipe = await asyncio.to_thread(retriever.get_recipe)
+        return recipe.url if recipe else None
+
+    elif sensor_type == "daily":
+        retriever = DailyRecipeRetriever()
+        recipes = await asyncio.to_thread(retriever.get_recipes, type="kochen")
+        return recipes[0].url if recipes and recipes[0] else None
+
+    elif sensor_type == "vegan":
+        retriever = SearchRetriever(health=["Vegan"])
+        recipes = await asyncio.to_thread(retriever.get_recipes, search_query="vegan")
+        return recipes[0].url if recipes and recipes[0] else None
+
+    elif sensor_type == "search":
+        search_query = sensor_config.get("search_query", "")
+
+        # Helper to parse comma-separated strings into lists
+        def parse_list(key):
+            value = sensor_config.get(key, "")
+            return [item.strip() for item in value.split(',') if item.strip()] if value else None
+
+        init_params = {
+            "properties": parse_list("properties"),
+            "health": parse_list("health"),
+            "categories": parse_list("categories"),
+            "countries": parse_list("countries"),
+            "meal_type": parse_list("meal_type"),
+            "prep_times": sensor_config.get("prep_times"),
+            "ratings": sensor_config.get("ratings"),
+            "sort": sensor_config.get("sort")
+        }
+
+        init_params = {k: v for k, v in init_params.items() if v}
+
+        retriever = SearchRetriever(**init_params)
+        recipes = await asyncio.to_thread(retriever.get_recipes, search_query=search_query)
+        return recipes[0].url if recipes and recipes[0] else None
+
+    return None
+
+def extract_recipe_attributes(recipe_url):
+    """Extract all attributes from a recipe URL robustly."""
     try:
-        async with async_timeout.timeout(600):
-            # Create retrievers
-            random_retriever = RandomRetriever()
-            daily_retriever = DailyRecipeRetriever()
-            vegan_retriever = SearchRetriever(health=["Vegan"])
+        recipe = Recipe(recipe_url)
+    except Exception as e:
+        _LOGGER.error("Failed to initialize Recipe object for URL %s: %s", recipe_url, e)
+        return {"title": "Error loading recipe details", "url": recipe_url, "status": "error", "error_message": f"Could not parse recipe page: {e}"}
 
-            _LOGGER.debug("Fetching all recipes concurrently...")
+    def safe_get_attr(recipe_obj, attr_name, default=None):
+        try:
+            return getattr(recipe_obj, attr_name)
+        except Exception:
+            _LOGGER.debug("Could not get attribute '%s' for recipe %s", attr_name, recipe_obj.url)
+            return default
 
-            # Use asyncio to run the fetches concurrently
-            # Note: aiohttp session management should ideally be handled for these calls
-            random_recipe_task = asyncio.to_thread(random_retriever.get_recipe)
-            daily_recipes_task = asyncio.to_thread(daily_retriever.get_recipes, type="kochen")
-            vegan_recipes_task = asyncio.to_thread(vegan_retriever.get_recipes, search_query="vegan")
-
-            # Gather results from all tasks
-            random_recipe, daily_recipes, vegan_recipes = await asyncio.gather(
-                random_recipe_task,
-                daily_recipes_task,
-                vegan_recipes_task
-            )
-
-            # Log the results after all tasks are completed
-            _LOGGER.debug(
-                "random_recipe retrieved: %s\ndaily_recipes retrieved: %s\nvegan_recipes retrieved: %s",
-                random_recipe,
-                daily_recipes,
-                vegan_recipes
-            )
-
-            selected_random_recipe = random_recipe
-            selected_daily_recipe = daily_recipes[0] if isinstance(daily_recipes, list) and daily_recipes else None
-            selected_vegan_recipe = vegan_recipes[0] if isinstance(vegan_recipes, list) and vegan_recipes else None
-
-            _LOGGER.debug("Selected random_recipe: %s", selected_random_recipe)
-            _LOGGER.debug("Selected daily_recipe: %s", selected_daily_recipe)
-            _LOGGER.debug("Selected vegan_recipe: %s", selected_vegan_recipe)
-
-            def get_recipe_url(recipe):
-                """Get recipe URL safely."""
-                return recipe.url if hasattr(recipe, 'url') and recipe.url else ""
-
-            def safe_get_attr(obj, attr, default=None):
-                """Try to get an attribute from obj, catch all exceptions."""
-                try:
-                    value = getattr(obj, attr)
-                    if callable(value):
-                        return value()
-                    return value
-                except Exception as e:
-                    _LOGGER.debug(f"Failed to get attribute {attr}: {e}", exc_info=True)
-                    return default
-
-            def extract_recipe_attributes(recipe_url):
-                result = {
-                    "title": "Unknown",
-                    "url": recipe_url or "",
-                    "image_url": "",
-                    "totalTime": 0,
-                    "ingredients": [],
-                    "calories": None,
-                    "category": "",
-                    "difficulty": "",
-                    "status": "success",
-                }
-
-                if not recipe_url:
-                    result["status"] = "error"
-                    result["error_message"] = "No recipe URL provided"
-                    return result
-
-                try:
-                    recipe = Recipe(recipe_url)
-                    result["title"] = safe_get_attr(recipe, "title", default="Unknown")
-                    result["image_url"] = safe_get_attr(recipe, "image_url", default="")
-                    result["totalTime"] = safe_get_attr(recipe, "total_time", default=0)
-                    result["ingredients"] = safe_get_attr(recipe, "ingredients", default=[])
-                    result["calories"] = safe_get_attr(recipe, "calories")
-                    result["category"] = safe_get_attr(recipe, "category", default="")
-                    result["difficulty"] = safe_get_attr(recipe, "difficulty", default="")
-
-                except Exception as e:
-                    _LOGGER.error(f"Recipe object could not be created for URL {recipe_url}: {e}", exc_info=True)
-                    result["status"] = "error"
-                    result["error_message"] = f"Failed to create recipe object: {e}"
-
-                return result
-
-            # Use asyncio to run recipe extraction concurrently
-            random_attributes_task = asyncio.to_thread(
-                extract_recipe_attributes, get_recipe_url(selected_random_recipe)
-            )
-            daily_attributes_task = asyncio.to_thread(
-                extract_recipe_attributes, get_recipe_url(selected_daily_recipe)
-            )
-            vegan_attributes_task = asyncio.to_thread(
-                extract_recipe_attributes, get_recipe_url(selected_vegan_recipe)
-            )
-
-            # Gather results from all tasks
-            random_attributes, daily_attributes, vegan_attributes = await asyncio.gather(
-                random_attributes_task,
-                daily_attributes_task,
-                vegan_attributes_task
-            )
-
-            # Log the results after all tasks are completed
-            _LOGGER.debug("Extracted random_attributes: %s\nExtracted daily_attributes: %s\nExtracted vegan_attributes: %s", random_attributes, daily_attributes, vegan_attributes)
-
-            # Prepare the data dictionary
-            return {
-                "random": random_attributes,
-                "daily": daily_attributes,
-                "vegan": vegan_attributes
-            }
-
-    except aiohttp.ClientError as err:
-        _LOGGER.error("Client error fetching data: %s", err, exc_info=True)
-        raise UpdateFailed(f"Client error fetching data: {err}")
-    except asyncio.TimeoutError:
-        _LOGGER.error("Timeout error fetching data", exc_info=True)
-        raise UpdateFailed("Timeout error fetching data")
-    except Exception as err:
-        _LOGGER.error("Unexpected error fetching data: %s", err, exc_info=True)
-        raise UpdateFailed(f"Unexpected error fetching data: {err}")
-
-
-async def async_setup_entry(
-    hass: core.HomeAssistant, entry: config_entries.ConfigEntry
-) -> bool:
-    """Set up platform from a ConfigEntry."""
-    _LOGGER.debug("Setting up Chefkoch entry")
-
-    hass.data.setdefault(DOMAIN, {})
-
-    # Create a single coordinator to fetch all data
-    coordinator = DataUpdateCoordinator(
-        hass,
-        _LOGGER,
-        name="Chefkoch Recipe Coordinator",
-        update_method=lambda: async_update_data(hass),
-        update_interval=SCAN_INTERVAL,
-    )
-
-    # Fetch initial data
-    await coordinator.async_config_entry_first_refresh()
-
-    hass.data[DOMAIN][entry.entry_id] = {
-        "coordinator": coordinator
+    return {
+        "title": safe_get_attr(recipe, 'title', 'Title not found'),
+        "url": recipe.url,
+        "image_url": safe_get_attr(recipe, 'image_url', ''),
+        "totalTime": safe_get_attr(recipe, 'total_time', '0'),
+        "prepTime": safe_get_attr(recipe, 'prep_time', ''),
+        "cookTime": safe_get_attr(recipe, 'cook_time', ''),
+        "restTime": safe_get_attr(recipe, 'rest_time', ''),
+        "calories": safe_get_attr(recipe, 'calories', ''),
+        "difficulty": safe_get_attr(recipe, 'difficulty', ''),
+        "ingredients": safe_get_attr(recipe, 'ingredients', []),
+        "instructions": safe_get_attr(recipe, 'instructions', ''),
+        "category": safe_get_attr(recipe, 'category', ''),
+        "servings": safe_get_attr(recipe, 'servings', ''),
+        "rating": (safe_get_attr(recipe, 'rating') or {}).get('rating'),
+        "rating_count": (safe_get_attr(recipe, 'rating') or {}).get('count'),
+        "status": "success",
     }
 
-    # Register update listener to update config entry when options are updated.
+async def async_setup_entry(hass: core.HomeAssistant, entry: config_entries.ConfigEntry) -> bool:
+    """Set up platform from a ConfigEntry."""
+    hass.data.setdefault(DOMAIN, {})
+    coordinator = DataUpdateCoordinator(
+        hass, _LOGGER, name="Chefkoch Recipe Coordinator",
+        update_method=lambda: async_update_data(hass, entry),
+        update_interval=SCAN_INTERVAL,
+    )
+    await coordinator.async_config_entry_first_refresh()
+    hass.data[DOMAIN][entry.entry_id] = {"coordinator": coordinator}
     entry.async_on_unload(entry.add_update_listener(options_update_listener))
-
-    # Forward the setup to the sensor platform.
     await hass.config_entries.async_forward_entry_setups(entry, ["sensor"])
-
     return True
 
-
-async def options_update_listener(
-    hass: core.HomeAssistant, config_entry: config_entries.ConfigEntry
-):
+async def options_update_listener(hass: core.HomeAssistant, config_entry: config_entries.ConfigEntry):
     """Handle options update."""
     await hass.config_entries.async_reload(config_entry.entry_id)
 
-
-async def async_unload_entry(
-    hass: core.HomeAssistant, entry: config_entries.ConfigEntry
-) -> bool:
+async def async_unload_entry(hass: core.HomeAssistant, entry: config_entries.ConfigEntry) -> bool:
     """Unload a config entry."""
     unload_ok = await hass.config_entries.async_unload_platforms(entry, ["sensor"])
-
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id)
-
     return unload_ok

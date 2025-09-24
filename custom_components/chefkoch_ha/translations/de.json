@@ -1,16 +1,58 @@
 {
   "config": {
-    "flow_title": "Einrichtung der Chefkoch Integration",
     "step": {
       "user": {
-        "description": "Hiermit aktivierst du die Chefkoch Integration"
+        "title": "Chefkoch einrichten",
+        "description": "Bestätigen, um die Chefkoch-Integration einzurichten.\n\nDadurch werden drei Standard-Sensoren erstellt (Zufälliges Rezept, Tägliches Rezept, Veganes Rezept).\n\nEigene Such-Sensoren können später über 'Konfigurieren' bei der Integration hinzugefügt werden."
       }
     },
     "abort": {
-      "already_configured": "Die Chefkoch Integration ist bereits konfiguriert."
+      "single_instance_allowed": "Es ist nur eine einzelne Instanz der Chefkoch-Integration erlaubt."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Chefkoch-Sensoren verwalten",
+        "menu": {
+          "add_sensor": "Neuen Such-Sensor hinzufügen",
+          "edit_sensor": "Bestehenden Such-Sensor bearbeiten",
+          "remove_sensor": "Such-Sensor entfernen"
+        }
+      },
+      "add_sensor": {
+        "title": "Neuen Such-Sensor hinzufügen",
+        "data": {
+          "name": "Sensorname (z.B. 'Kuchen')",
+          "search_query": "Suchbegriff (z.B. 'Käsekuchen')",
+          "properties": "Eigenschaften (z.B. Einfach, Schnell), kommagetrennt",
+          "health": "Ernährungsform (z.B. Vegan, Low Carb), kommagetrennt",
+          "categories": "Kategorien (z.B. Pizza), kommagetrennt",
+          "countries": "Länder (z.B. Italien), kommagetrennt",
+          "meal_type": "Mahlzeit (z.B. Hauptspeise), kommagetrennt",
+          "prep_times": "Max. Zubereitungszeit (Minuten)",
+          "ratings": "Mindestbewertung (Sterne)",
+          "sort": "Sortieren nach"
+        }
+      },
+      "edit_sensor_form": {
+        "title": "Sensor bearbeiten",
+        "data": {
+          "name": "Sensorname",
+          "search_query": "Suchbegriff",
+          "properties": "Eigenschaften, kommagetrennt",
+          "health": "Ernährungsform, kommagetrennt",
+          "categories": "Kategorien, kommagetrennt",
+          "countries": "Länder, kommagetrennt",
+          "meal_type": "Mahlzeit, kommagetrennt",
+          "prep_times": "Max. Zubereitungszeit (Minuten)",
+          "ratings": "Mindestbewertung (Sterne)",
+          "sort": "Sortieren nach"
+        }
+      }
     },
-    "error": {
-      "unknown": "Unbekannter Fehler"
+    "abort": {
+      "no_custom_sensors": "Es sind keine benutzerdefinierten Sensoren zum Bearbeiten oder Entfernen vorhanden."
     }
   }
 }

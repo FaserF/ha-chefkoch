@@ -1,16 +1,58 @@
 {
   "config": {
-    "flow_title": "Setup Chefkoch Integration",
     "step": {
       "user": {
-        "description": "This enables the chefkoch integration"
+        "title": "Set up Chefkoch",
+        "description": "Confirm to set up the Chefkoch integration.\n\nThis will create three default sensors (Random Recipe, Daily Recipe, Vegan Recipe).\n\nCustom search sensors can be added later via 'Configure' on the integration."
       }
     },
     "abort": {
-      "already_configured": "The chefkoch integration is already configured"
+      "single_instance_allowed": "Only a single instance of the Chefkoch integration is allowed."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Manage Chefkoch Sensors",
+        "menu": {
+          "add_sensor": "Add a new Search Sensor",
+          "edit_sensor": "Edit an existing Search Sensor",
+          "remove_sensor": "Remove a Search Sensor"
+        }
+      },
+      "add_sensor": {
+        "title": "Add New Search Sensor",
+        "data": {
+          "name": "Sensor Name (e.g., 'Cakes')",
+          "search_query": "Search Term (e.g., 'Cheesecake')",
+          "properties": "Properties (e.g. Simple, Quick), comma-separated",
+          "health": "Diet (e.g. Vegan, Low Carb), comma-separated",
+          "categories": "Categories (e.g. Pizza), comma-separated",
+          "countries": "Countries (e.g. Italy), comma-separated",
+          "meal_type": "Meal Type (e.g. Main Dish), comma-separated",
+          "prep_times": "Max. Preparation Time (Minutes)",
+          "ratings": "Minimum Rating (Stars)",
+          "sort": "Sort by"
+        }
+      },
+      "edit_sensor_form": {
+        "title": "Edit Sensor",
+        "data": {
+          "name": "Sensor Name",
+          "search_query": "Search Term",
+          "properties": "Properties, comma-separated",
+          "health": "Diet, comma-separated",
+          "categories": "Categories, comma-separated",
+          "countries": "Countries, comma-separated",
+          "meal_type": "Meal Type, comma-separated",
+          "prep_times": "Max. Preparation Time (Minutes)",
+          "ratings": "Minimum Rating (Stars)",
+          "sort": "Sort by"
+        }
+      }
     },
-    "error": {
-      "unknown": "Unknown Error"
+    "abort": {
+      "no_custom_sensors": "There are no custom sensors to edit or remove."
     }
   }
 }
