@@ -35,7 +35,7 @@ def get_search_schema(sensor_data=None):
 
     return vol.Schema({
         vol.Required("name", default=sensor_data.get("name")): str,
-        vol.Required("search_query", default=sensor_data.get("search_query", "")): str,
+        vol.Optional("search_query", default=sensor_data.get("search_query", "")): str,
         vol.Optional("properties", default=str_to_list(sensor_data.get("properties"))): cv.multi_select(PROPERTIES_OPTIONS),
         vol.Optional("health", default=str_to_list(sensor_data.get("health"))): cv.multi_select(HEALTH_OPTIONS),
         vol.Optional("categories", default=str_to_list(sensor_data.get("categories"))): cv.multi_select(CATEGORIES_OPTIONS),
