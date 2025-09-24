@@ -2,8 +2,8 @@
   "config": {
     "step": {
       "user": {
-        "title": "Chefkoch Setup",
-        "description": "This will set up the main Chefkoch integration. You can add and configure recipe sensors in the next step under 'Options'."
+        "title": "Set up Chefkoch",
+        "description": "Confirm to set up the Chefkoch integration.\n\nThis will create three default sensors (Random Recipe, Daily Recipe, Vegan Recipe).\n\nCustom search sensors can be added later via 'Configure' on the integration."
       }
     },
     "abort": {
@@ -15,19 +15,17 @@
       "init": {
         "title": "Manage Chefkoch Sensors",
         "menu": {
-          "add_defaults": "Add Default Sensors (Random, Daily, Vegan)",
-          "add_sensor": "Add a new Recipe Sensor",
-          "edit_sensor": "Edit an existing Sensor",
-          "remove_sensor": "Remove a Sensor"
+          "add_sensor": "Add a new Search Sensor",
+          "edit_sensor": "Edit an existing Search Sensor",
+          "remove_sensor": "Remove a Search Sensor"
         }
       },
       "add_sensor": {
-        "title": "Add New Sensor",
+        "title": "Add New Search Sensor",
         "data": {
-          "name": "Sensor Name",
-          "search_query": "Search Term (e.g., 'Pasta')",
-          "category": "Category",
-          "difficulty": "Difficulty"
+          "name": "Sensor Name (e.g., 'Cakes')",
+          "search_query": "Search Term (e.g., 'Cheesecake')",
+          "category": "Category (optional)"
         }
       },
       "edit_sensor": {
@@ -41,8 +39,7 @@
         "data": {
           "name": "Sensor Name",
           "search_query": "Search Term",
-          "category": "Category",
-          "difficulty": "Difficulty"
+          "category": "Category"
         }
       },
       "remove_sensor": {
@@ -53,7 +50,8 @@
       }
     },
     "abort": {
-      "no_sensors": "There are no sensors to edit or remove."
+      "no_sensors": "There are no sensors to edit or remove.",
+      "no_custom_sensors": "There are no custom sensors to edit or remove."
     }
   }
 }

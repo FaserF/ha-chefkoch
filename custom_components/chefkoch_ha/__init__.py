@@ -26,17 +26,15 @@ async def async_update_data(hass: core.HomeAssistant, entry: config_entries.Conf
         try:
             recipe_url = await _fetch_recipe_url(sensor_config)
             if recipe_url:
-                # Use hass.async_add_executor_job to run the blocking I/O in a thread
                 attributes = await hass.async_add_executor_job(extract_recipe_attributes, recipe_url)
                 data[sensor_id] = attributes
             else:
                 _LOGGER.warning("No recipe found for sensor %s", sensor_config['name'])
                 data[sensor_id] = {"title": "No recipe found", "status": "error"}
         except Exception as e:
-            _LOGGER.error("Error fetching data for sensor %s: %s", sensor_config['name'], e, exc_info=True)
-            data[sensor_id] = {"title": "Error", "status": "error", "error_message": str(e)}
+            _LOGGER.error("Error during data fetching for sensor %s: %s", sensor_config['name'], e, exc_info=True)
+            data[sensor_id] = {"title": "Error fetching URL", "status": "error", "error_message": str(e)}
 
-    # Create a list of tasks to run concurrently
     tasks = [fetch_and_process_sensor(s) for s in sensors]
     await asyncio.gather(*tasks)
 
@@ -54,54 +52,71 @@ async def _fetch_recipe_url(sensor_config: dict) -> str | None:
     elif sensor_type == "daily":
         retriever = DailyRecipeRetriever()
         recipes = await asyncio.to_thread(retriever.get_recipes, type="kochen")
-        return recipes[0].url if recipes else None
+        return recipes[0].url if recipes and recipes[0] else None
 
     elif sensor_type == "vegan":
         retriever = SearchRetriever(health=["Vegan"])
         recipes = await asyncio.to_thread(retriever.get_recipes, search_query="vegan")
-        return recipes[0].url if recipes else None
+        return recipes[0].url if recipes and recipes[0] else None
 
     elif sensor_type == "search":
         search_query = sensor_config.get("search_query", "")
         init_params = {
             "category": sensor_config.get("category"),
-            "difficulty": sensor_config.get("difficulty")
         }
-        # Filter out None or empty values for the constructor
         init_params = {k: v for k, v in init_params.items() if v}
 
+        # The 'difficulty' parameter is not supported by the library version used.
+        # It has been removed to prevent crashes.
         retriever = SearchRetriever(**init_params)
         recipes = await asyncio.to_thread(retriever.get_recipes, search_query=search_query)
-        return recipes[0].url if recipes else None
+        return recipes[0].url if recipes and recipes[0] else None
 
     return None
 
 def extract_recipe_attributes(recipe_url):
-    """Extract all attributes from a recipe URL."""
+    """Extract all attributes from a recipe URL robustly."""
     try:
+        # This is the critical call that can fail due to website changes.
         recipe = Recipe(recipe_url)
-        # Corrected attribute names from camelCase to snake_case
-        return {
-            "title": getattr(recipe, 'title', 'Unknown'),
-            "url": recipe.url,
-            "image_url": getattr(recipe, 'image_url', ''),
-            "totalTime": getattr(recipe, 'total_time', 0),
-            "prepTime": getattr(recipe, 'prep_time', 0),
-            "cookTime": getattr(recipe, 'cook_time', 0),
-            "restTime": getattr(recipe, 'rest_time', 0),
-            "calories": getattr(recipe, 'calories', None),
-            "difficulty": getattr(recipe, 'difficulty', ''),
-            "ingredients": getattr(recipe, 'ingredients', []),
-            "instructions": getattr(recipe, 'instructions', ''),
-            "category": getattr(recipe, 'category', ''),
-            "servings": getattr(recipe, 'servings', None),
-            "rating": getattr(recipe, 'rating', {}).get('rating'),
-            "rating_count": getattr(recipe, 'rating', {}).get('count'),
-            "status": "success",
-        }
     except Exception as e:
-        _LOGGER.error(f"Failed to extract attributes for URL {recipe_url}: {e}")
-        return {"status": "error", "error_message": str(e)}
+        _LOGGER.error("Failed to initialize Recipe object for URL %s: %s", recipe_url, e)
+        # Return minimal data so the sensor entity doesn't fail completely.
+        return {
+            "title": "Error loading recipe details",
+            "url": recipe_url,
+            "status": "error",
+            "error_message": f"Could not parse recipe page: {e}"
+        }
+
+    def safe_get_attr(recipe_obj, attr_name, default=None):
+        """Safely get an attribute, returning default if it fails for any reason."""
+        try:
+            return getattr(recipe_obj, attr_name)
+        except Exception:
+            # This will catch KeyErrors, IndexErrors, TypeErrors, etc.
+            _LOGGER.debug("Could not get attribute '%s' for recipe %s", attr_name, recipe_obj.url)
+            return default
+
+    # If Recipe object was created successfully, extract attributes safely.
+    return {
+        "title": safe_get_attr(recipe, 'title', 'Title not found'),
+        "url": recipe.url,
+        "image_url": safe_get_attr(recipe, 'image_url', ''),
+        "totalTime": safe_get_attr(recipe, 'total_time', '0'),
+        "prepTime": safe_get_attr(recipe, 'prep_time', ''),
+        "cookTime": safe_get_attr(recipe, 'cook_time', ''),
+        "restTime": safe_get_attr(recipe, 'rest_time', ''),
+        "calories": safe_get_attr(recipe, 'calories', ''),
+        "difficulty": safe_get_attr(recipe, 'difficulty', ''),
+        "ingredients": safe_get_attr(recipe, 'ingredients', []),
+        "instructions": safe_get_attr(recipe, 'instructions', ''),
+        "category": safe_get_attr(recipe, 'category', ''),
+        "servings": safe_get_attr(recipe, 'servings', ''),
+        "rating": (safe_get_attr(recipe, 'rating') or {}).get('rating'),
+        "rating_count": (safe_get_attr(recipe, 'rating') or {}).get('count'),
+        "status": "success",
+    }
 
 async def async_setup_entry(hass: core.HomeAssistant, entry: config_entries.ConfigEntry) -> bool:
     """Set up platform from a ConfigEntry."""

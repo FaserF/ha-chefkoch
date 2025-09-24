@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Chefkoch einrichten",
-        "description": "Hiermit wird die Chefkoch-Integration eingerichtet. Rezept-Sensoren können im nächsten Schritt unter 'Optionen' hinzugefügt und konfiguriert werden."
+        "description": "Bestätigen, um die Chefkoch-Integration einzurichten.\n\nDadurch werden drei Standard-Sensoren erstellt (Zufälliges Rezept, Tägliches Rezept, Veganes Rezept).\n\nEigene Such-Sensoren können später über 'Konfigurieren' bei der Integration hinzugefügt werden."
       }
     },
     "abort": {
@@ -15,19 +15,17 @@
       "init": {
         "title": "Chefkoch-Sensoren verwalten",
         "menu": {
-          "add_defaults": "Standard-Sensoren hinzufügen (Zufall, Täglich, Vegan)",
-          "add_sensor": "Neuen Rezept-Sensor hinzufügen",
-          "edit_sensor": "Bestehenden Sensor bearbeiten",
-          "remove_sensor": "Sensor entfernen"
+          "add_sensor": "Neuen Such-Sensor hinzufügen",
+          "edit_sensor": "Bestehenden Such-Sensor bearbeiten",
+          "remove_sensor": "Such-Sensor entfernen"
         }
       },
       "add_sensor": {
-        "title": "Neuen Sensor hinzufügen",
+        "title": "Neuen Such-Sensor hinzufügen",
         "data": {
-          "name": "Sensorname",
-          "search_query": "Suchbegriff (z.B. 'Pasta')",
-          "category": "Kategorie",
-          "difficulty": "Schwierigkeit"
+          "name": "Sensorname (z.B. 'Kuchen')",
+          "search_query": "Suchbegriff (z.B. 'Käsekuchen')",
+          "category": "Kategorie (optional)"
         }
       },
       "edit_sensor": {
@@ -41,8 +39,7 @@
         "data": {
           "name": "Sensorname",
           "search_query": "Suchbegriff",
-          "category": "Kategorie",
-          "difficulty": "Schwierigkeit"
+          "category": "Kategorie"
         }
       },
       "remove_sensor": {
@@ -53,7 +50,8 @@
       }
     },
     "abort": {
-      "no_sensors": "Es sind keine Sensoren zum Bearbeiten oder Entfernen vorhanden."
+      "no_sensors": "Es sind keine Sensoren zum Bearbeiten oder Entfernen vorhanden.",
+      "no_custom_sensors": "Es sind keine benutzerdefinierten Sensoren zum Bearbeiten oder Entfernen vorhanden."
     }
   }
 }
