@@ -1,12 +1,13 @@
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
 # Chefkoch Homeassistant Sensor
-The `chefkoch_ha` sensor will give you random reciepes from chefkoch. It automatically updates once a day. But you can update it by a automation more often.
+The chefkoch_ha integration provides recipes from Germany's largest cooking platform, Chefkoch.de, directly within Home Assistant. It automatically creates three standard recipe sensors and allows you to add an unlimited number of custom search sensors with powerful filters to find the perfect meal for any occasion.
+All sensors refresh automatically once a day or upon a restart of Home Assistant.
 
-```yaml
-- service: homeassistant.reload_config_entry
-      data:
-        entry_id: 01J6EXEW32EBEDF3WV4VC0DA3C
-```
+## Features
+- Default Sensors: Automatically creates sensors for a random recipe, the daily recipe recommendation, and a random vegan recipe upon setup.
+- Powerful Custom Search Sensors: Create your own sensors with specific search queries and fine-grained filters.
+- Extensive Filtering: Filter recipes by properties (e.g., "Simple", "Quick"), diet (e.g., "Vegan", "Low Carb"), categories, countries, meal types, preparation time, and minimum rating.
+- Rich Attributes: Each sensor provides a wealth of information, including title, URL, image, ingredients, instructions, preparation times, calories, and ratings.
 
 ## Installation
 ### 1. Using HACS (recommended way)
@@ -39,6 +40,26 @@ There will be three new sensors after adding it via HA:
 - sensor.chefkoch_daily_recipe: Daily recipe recommendation from chefkoch
 - sensor.chefkoch_vegan_recipe: Vegan recipe
 
+## Creating Custom Search Sensors
+You can create sensors that match your exact needs.
+1. Go to Settings > Devices & Services and find your Chefkoch integration.
+2. Click Configure.
+3. Select "Add a new Search Sensor".
+4. Fill out the form with your desired filters.
+
+### Available Filters
+- Sensor Name: A friendly name for your sensor (e.g., "Quick Pasta Dishes"). The entity ID will be generated from this.
+- Search Term: The main keyword for your search (e.g., "Lasagne").
+- Properties: Add tags like Simple, Quick, Party. Separate multiple values with a comma.
+- Diet: Filter for dietary restrictions like Vegan, Vegetarian, Low Carb. Comma-separated.
+- Categories: Filter by recipe categories like Pizza, Salad. Comma-separated.
+- Countries: Find recipes from specific countries like Italy, German. Comma-separated.
+- Meal Type: Filter by meal types such as Main Dish, Dessert. Comma-separated.
+- Max. Preparation Time: Choose a maximum preparation time in minutes.
+- Minimum Rating: Set a minimum star rating.
+
+You can add, edit, or remove your custom search sensors at any time through the same Configure menu.
+
 ### Automations
 ```yaml
 alias: "Daily Random Recipe"
@@ -69,7 +90,15 @@ action:
         **Category:** {{ state_attr('sensor.chefkoch_random_recipe', 'category') }}
 
       title: "Recipe of the Day"
+```
 
+## Forcing an Update
+If you don't want to wait for the daily refresh, you can force all Chefkoch sensors to update by calling the homeassistant.reload_config_entry service.
+
+```yaml
+- service: homeassistant.reload_config_entry
+  target:
+    entity_id: sensor.chefkoch_random_recipe # You can use any of your chefkoch sensors here
 ```
 
 ## Bug reporting
