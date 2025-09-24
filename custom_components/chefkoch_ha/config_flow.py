@@ -12,7 +12,19 @@ class ChefkochConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
     async def async_step_user(self, user_input=None):
-        """Handle the initial step."""
+        """
+        Handle the initial user step of the config flow.
+        
+        If an existing config entry for this integration is present, aborts the flow with reason
+        "single_instance_allowed". Otherwise creates and returns a new config entry titled
+        "Chefkoch" with empty data and default options containing an empty "sensors" list.
+        
+        Parameters:
+            user_input (dict | None): Optional data provided by the user (ignored by this step).
+        
+        Returns:
+            config_entries.ConfigEntry | FlowResult: The created config entry on success, or an abort flow result.
+        """
         if self._async_current_entries():
             return self.async_abort(reason="single_instance_allowed")
 
@@ -29,13 +41,33 @@ class ChefkochOptionsFlowHandler(config_entries.OptionsFlow):
     """Handle an options flow for Chefkoch."""
 
     def __init__(self, config_entry: config_entries.ConfigEntry):
-        """Initialize options flow."""
+        """
+        Initialize the options flow handler for a given config entry.
+        
+        Populates the handler's state from the provided config_entry: copies the existing
+        "sensors" list into self.current_sensors and initializes self.sensor_to_edit_id to None.
+        
+        Parameters:
+            config_entry (config_entries.ConfigEntry): The config entry whose options are used to
+                initialize the flow.
+        """
         self.config_entry = config_entry
         self.current_sensors = self.config_entry.options.get("sensors", [])
         self.sensor_to_edit_id = None
 
     async def async_step_init(self, user_input=None):
-        """Manage the options menu."""
+        """
+        Build and show the options menu for sensor management.
+        
+        The menu always includes "add_sensor". If any sensors already exist, "edit_sensor"
+        and "remove_sensor" are added. If any of the default sensor IDs ("random",
+        "daily", "vegan") are not present in the current sensors, "add_defaults" is
+        inserted at the front of the menu.
+        
+        Returns:
+            A Home Assistant flow result that displays the named menu step ("init")
+            with the computed menu options.
+        """
         menu_options = ["add_sensor"]
         if self.current_sensors:
              menu_options.extend(["edit_sensor", "remove_sensor"])
@@ -51,7 +83,11 @@ class ChefkochOptionsFlowHandler(config_entries.OptionsFlow):
         )
 
     async def async_step_add_defaults(self, user_input=None):
-        """Handle adding default sensors."""
+        """
+        Add predefined default sensors that are missing and create an options entry.
+        
+        This adds the three built-in sensors with IDs "random", "daily", and "vegan" only if they are not already present in self.current_sensors. Existing sensors are preserved; the function returns a new config entry whose data contains the updated "sensors" list.
+        """
         default_sensors = [
             {"type": "random", "id": "random", "name": "Chefkoch Random Recipe"},
             {"type": "daily", "id": "daily", "name": "Chefkoch Daily Recipe"},
@@ -66,7 +102,23 @@ class ChefkochOptionsFlowHandler(config_entries.OptionsFlow):
         return self.async_create_entry(title="", data={"sensors": updated_sensors})
 
     async def async_step_add_sensor(self, user_input=None):
-        """Handle the step to add a new search sensor."""
+        """
+        Handle the "add sensor" options step.
+        
+        If called with `user_input` (a dict from the submitted form), creates a new search sensor with a generated UUID and the submitted fields, appends it to the current sensors list, and returns a new config entry containing {"sensors": updated_sensors}.
+        
+        If called without `user_input`, returns a form asking for:
+        - name (required)
+        - search_query (optional)
+        - category (optional)
+        - difficulty (optional; one of '', 'Einfach', 'Normal', 'Schwer')
+        
+        Parameters:
+            user_input (dict | None): Submitted form values when present.
+        
+        Returns:
+            FlowResult: either a created config entry (on submit) or a form to display (when no input).
+        """
         if user_input is not None:
             new_sensor = {
                 "id": str(uuid.uuid4()),
@@ -103,7 +155,20 @@ class ChefkochOptionsFlowHandler(config_entries.OptionsFlow):
         )
 
     async def async_step_edit_sensor_form(self, user_input=None):
-        """Show the form to edit a sensor's details."""
+        """
+        Display a form to edit an existing sensor's properties or apply submitted changes.
+        
+        If no sensor matches the previously selected sensor ID, the flow is aborted with reason "no_sensors".
+        - When called with `user_input` (form submitted): updates the target sensor in `self.current_sensors` with the submitted fields
+          (`name`, optional `search_query`, `category`, and `difficulty`) and finishes by creating a new entry with the updated sensors list.
+        - When called without `user_input`: returns a form populated with the sensor's current values. The form fields are:
+          - name (required)
+          - search_query (optional)
+          - category (optional)
+          - difficulty (optional; allowed values: '', 'Einfach', 'Normal', 'Schwer')
+        
+        The created config entry has an empty title and its data contains {"sensors": self.current_sensors}.
+        """
         sensor_to_edit = next((s for s in self.current_sensors if s["id"] == self.sensor_to_edit_id), None)
         if not sensor_to_edit:
              return self.async_abort(reason="no_sensors") # Should not happen
@@ -131,7 +196,19 @@ class ChefkochOptionsFlowHandler(config_entries.OptionsFlow):
         )
 
     async def async_step_remove_sensor(self, user_input=None):
-        """Handle sensor removal."""
+        """
+        Remove one or more configured sensors from the options flow.
+        
+        If called with user input, expects a "sensors_to_remove" iterable containing sensor IDs;
+        it filters those IDs out of the current sensors and finishes by creating an updated entry
+        with the remaining sensors.
+        
+        If called without input, presents a form (step_id "remove_sensor") with a multi-select of
+        currently configured sensors to choose which to remove.
+        
+        Returns:
+            A config flow entry when removal is submitted, or a form result when prompting the user.
+        """
         if user_input is not None:
             sensors_to_remove = user_input["sensors_to_remove"]
             updated_sensors = [s for s in self.current_sensors if s["id"] not in sensors_to_remove]

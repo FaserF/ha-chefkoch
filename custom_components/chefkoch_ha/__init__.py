@@ -13,7 +13,22 @@ SCAN_INTERVAL = timedelta(days=1)
 
 
 async def async_update_data(hass: core.HomeAssistant, entry: config_entries.ConfigEntry):
-    """Fetch data from Chefkoch for all configured sensors."""
+    """
+    Fetch recipes for all sensors configured in the given ConfigEntry.
+    
+    Reads the list of sensor configurations from entry.options["sensors"] (returns {} if absent or empty). For each sensor it concurrently:
+    - resolves a recipe URL via _fetch_recipe_url(sensor_config),
+    - if a URL is found, extracts recipe attributes using extract_recipe_attributes (run in a thread),
+    - stores the resulting attributes under the sensor's id in the returned mapping.
+    
+    On failures: a sensor entry will contain {"title": "No recipe found", "status": "error"} when no URL is found, or {"title": "Error", "status": "error", "error_message": ...} if an exception occurs during fetch/processing.
+    
+    Parameters:
+    - entry: ConfigEntry whose options must include a "sensors" list of sensor config dicts (each must provide at least "id" and "name"; other keys are used by _fetch_recipe_url).
+    
+    Returns:
+    A dict mapping sensor_id -> attributes_dict (or error-status dict) for each configured sensor.
+    """
     sensors = entry.options.get("sensors", [])
     if not sensors:
         return {}
@@ -21,6 +36,20 @@ async def async_update_data(hass: core.HomeAssistant, entry: config_entries.Conf
     data = {}
 
     async def fetch_and_process_sensor(sensor_config):
+        """
+        Fetch and process a single sensor configuration: obtain a recipe URL, extract recipe attributes, and store the result in the outer `data` mapping.
+        
+        sensor_config (dict) should include at least:
+        - "id": unique sensor identifier used as the key in `data`
+        - "name": human-readable sensor name (used in logs)
+        Other keys determine how the recipe URL is retrieved.
+        
+        Side effects:
+        - Writes the recipe attributes or an error/status dict into the enclosing `data` dict under the sensor's id.
+        - Logs warnings and errors for missing recipes or failures.
+        
+        This function handles its own errors and does not raise exceptions.
+        """
         sensor_id = sensor_config["id"]
 
         try:
@@ -43,7 +72,28 @@ async def async_update_data(hass: core.HomeAssistant, entry: config_entries.Conf
     return data
 
 async def _fetch_recipe_url(sensor_config: dict) -> str | None:
-    """Fetch the recipe URL based on sensor config."""
+    """
+    Select and return a Chefkoch recipe URL according to the given sensor configuration.
+    
+    Given sensor_config (a dict) this chooses an appropriate retriever based on its "type"
+    and returns the first matching recipe's URL, or None if no recipe is found or the type is
+    unrecognized.
+    
+    Supported sensor types:
+    - "random": returns a single random recipe.
+    - "daily": returns the first recipe from the daily recipes of type "kochen".
+    - "vegan": searches with a vegan health filter and returns the first match.
+    - "search": performs a parameterized search; recognized optional keys are
+      "search_query" (string), "category", and "difficulty" (the latter two are used to
+      construct the SearchRetriever and are ignored if None/empty).
+    
+    Parameters:
+        sensor_config (dict): Sensor configuration containing at minimum a "type" key.
+            For "search" type it may also include "search_query", "category", and "difficulty".
+    
+    Returns:
+        str | None: The recipe URL if found, otherwise None.
+    """
     sensor_type = sensor_config["type"]
 
     if sensor_type == "random":
@@ -77,7 +127,35 @@ async def _fetch_recipe_url(sensor_config: dict) -> str | None:
     return None
 
 def extract_recipe_attributes(recipe_url):
-    """Extract all attributes from a recipe URL."""
+    """
+    Extracts recipe data from a Chefkoch recipe URL and returns a normalized attribute dictionary.
+    
+    Parameters:
+        recipe_url (str): URL of the recipe page to parse.
+    
+    Returns:
+        dict: A dictionary containing normalized recipe attributes. On success, includes:
+            - title (str)
+            - url (str)
+            - image_url (str)
+            - totalTime (int|float)
+            - prepTime (int|float)
+            - cookTime (int|float)
+            - restTime (int|float)
+            - calories (int|None)
+            - difficulty (str)
+            - ingredients (list)
+            - instructions (str)
+            - category (str)
+            - servings (int|None)
+            - rating (number|None)
+            - rating_count (int|None)
+            - status (str) — "success"
+    
+        If extraction fails, returns a dictionary with:
+            - status: "error"
+            - error_message: (str) exception message describing the failure
+    """
     try:
         recipe = Recipe(recipe_url)
         # Corrected attribute names from camelCase to snake_case
@@ -104,7 +182,19 @@ def extract_recipe_attributes(recipe_url):
         return {"status": "error", "error_message": str(e)}
 
 async def async_setup_entry(hass: core.HomeAssistant, entry: config_entries.ConfigEntry) -> bool:
-    """Set up platform from a ConfigEntry."""
+    """
+    Set up the Chefkoch integration for a specific config entry.
+    
+    Creates and registers a DataUpdateCoordinator for the entry, performs an initial data refresh,
+    stores the coordinator under hass.data[DOMAIN][entry.entry_id], registers an options update
+    listener, and forwards platform setup to the "sensor" platform.
+    
+    Parameters:
+        entry (config_entries.ConfigEntry): The config entry for this integration instance.
+    
+    Returns:
+        bool: True if setup completed successfully.
+    """
     hass.data.setdefault(DOMAIN, {})
 
     coordinator = DataUpdateCoordinator(
@@ -129,7 +219,15 @@ async def options_update_listener(hass: core.HomeAssistant, config_entry: config
     await hass.config_entries.async_reload(config_entry.entry_id)
 
 async def async_unload_entry(hass: core.HomeAssistant, entry: config_entries.ConfigEntry) -> bool:
-    """Unload a config entry."""
+    """
+    Unload a config entry's platforms and clean up stored integration data.
+    
+    Unloads the "sensor" platform for the provided ConfigEntry. If platform unload succeeds,
+    removes the entry's coordinator/data from hass.data[DOMAIN].
+    
+    Returns:
+        bool: True if the platform unload completed successfully, False otherwise.
+    """
     unload_ok = await hass.config_entries.async_unload_platforms(entry, ["sensor"])
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id)
