@@ -14,7 +14,7 @@
     "step": {
       "init": {
         "title": "Chefkoch-Sensoren verwalten",
-        "menu": {
+        "menu_options": {
           "add_sensor": "Neuen Such-Sensor hinzufügen",
           "edit_sensor": "Bestehenden Such-Sensor bearbeiten",
           "remove_sensor": "Such-Sensor entfernen"
@@ -35,6 +35,12 @@
           "sort": "Sortieren nach"
         }
       },
+      "edit_sensor": {
+        "title": "Sensor zum Bearbeiten auswählen",
+        "data": {
+          "sensor_id": "Sensor"
+        }
+      },
       "edit_sensor_form": {
         "title": "Sensor bearbeiten",
         "data": {
@@ -48,6 +54,12 @@
           "prep_times": "Max. Zubereitungszeit (Minuten)",
           "ratings": "Mindestbewertung (Sterne)",
           "sort": "Sortieren nach"
+        }
+      },
+      "remove_sensor": {
+        "title": "Sensoren entfernen",
+        "data": {
+          "sensors_to_remove": "Sensoren zum Entfernen auswählen"
         }
       }
     },

@@ -14,7 +14,7 @@
     "step": {
       "init": {
         "title": "Manage Chefkoch Sensors",
-        "menu": {
+        "menu_options": {
           "add_sensor": "Add a new Search Sensor",
           "edit_sensor": "Edit an existing Search Sensor",
           "remove_sensor": "Remove a Search Sensor"
@@ -48,6 +48,18 @@
           "prep_times": "Max. Preparation Time (Minutes)",
           "ratings": "Minimum Rating (Stars)",
           "sort": "Sort by"
+        }
+      },
+      "edit_sensor": {
+        "title": "Select Sensor to Edit",
+        "data": {
+          "sensor_id": "Sensor"
+        }
+      },
+      "remove_sensor": {
+        "title": "Remove Sensors",
+        "data": {
+          "sensors_to_remove": "Select sensors to remove"
         }
       }
     },
