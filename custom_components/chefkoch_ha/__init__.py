@@ -22,7 +22,7 @@ executor = ThreadPoolExecutor()
 async def async_update_data(hass: core.HomeAssistant):
     """Fetch data from Chefkoch."""
     try:
-        async with async_timeout.timeout(SCAN_INTERVAL.total_seconds() - 1):
+        async with async_timeout.timeout(600):
             # Create retrievers
             random_retriever = RandomRetriever()
             daily_retriever = DailyRecipeRetriever()
