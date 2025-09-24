@@ -27,7 +27,13 @@ class ChefkochSensor(CoordinatorEntity, SensorEntity):
         super().__init__(coordinator)
         self.sensor_config = sensor_config
 
-        self._attr_name = sensor_config["name"]
+        name = sensor_config["name"]
+
+        if not name.lower().startswith("chefkoch"):
+            self._attr_name = f"Chefkoch {name}"
+        else:
+            self._attr_name = name
+
         self._attr_icon = "mdi:chef-hat"
         self._attr_unique_id = f"chefkoch_{sensor_config['id']}"
 
@@ -47,13 +53,11 @@ class ChefkochSensor(CoordinatorEntity, SensorEntity):
         """Return the state attributes."""
         data = self.coordinator.data.get(self.sensor_id, {})
 
-        # Dynamically add all attributes that are not None, empty strings or empty lists
         attributes = {
             key: value
             for key, value in data.items()
             if value is not None and value != '' and value != []
         }
-        # We don't need title and status as attributes, they are state or for internal use
         attributes.pop("title", None)
         attributes.pop("status", None)
 

@@ -3,8 +3,6 @@ import logging
 from datetime import timedelta
 from homeassistant import config_entries, core
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-import async_timeout
-import aiohttp
 from chefkoch.retrievers import DailyRecipeRetriever, RandomRetriever, SearchRetriever
 from chefkoch import Recipe
 
@@ -23,20 +21,22 @@ async def async_update_data(hass: core.HomeAssistant, entry: config_entries.Conf
     data = {}
 
     async def fetch_and_process_sensor(sensor_config):
-        sensor_type = sensor_config["type"]
-        sensor_id = sensor_config.get("id", sensor_type)
+        sensor_id = sensor_config["id"]
 
         try:
             recipe_url = await _fetch_recipe_url(sensor_config)
             if recipe_url:
+                # Use hass.async_add_executor_job to run the blocking I/O in a thread
                 attributes = await hass.async_add_executor_job(extract_recipe_attributes, recipe_url)
                 data[sensor_id] = attributes
             else:
+                _LOGGER.warning("No recipe found for sensor %s", sensor_config['name'])
                 data[sensor_id] = {"title": "No recipe found", "status": "error"}
         except Exception as e:
-            _LOGGER.error(f"Error fetching data for sensor {sensor_config['name']}: {e}")
-            data[sensor_id] = {"title": "Error", "status": "error"}
+            _LOGGER.error("Error fetching data for sensor %s: %s", sensor_config['name'], e, exc_info=True)
+            data[sensor_id] = {"title": "Error", "status": "error", "error_message": str(e)}
 
+    # Create a list of tasks to run concurrently
     tasks = [fetch_and_process_sensor(s) for s in sensors]
     await asyncio.gather(*tasks)
 
@@ -53,25 +53,25 @@ async def _fetch_recipe_url(sensor_config: dict) -> str | None:
 
     elif sensor_type == "daily":
         retriever = DailyRecipeRetriever()
-        recipes = await asyncio.to_thread(retriever.get_recipes)
+        recipes = await asyncio.to_thread(retriever.get_recipes, type="kochen")
         return recipes[0].url if recipes else None
 
-    elif sensor_type == "vegan": # Keep as a default for simplicity
+    elif sensor_type == "vegan":
         retriever = SearchRetriever(health=["Vegan"])
-        recipes = await asyncio.to_thread(retriever.get_recipes)
+        recipes = await asyncio.to_thread(retriever.get_recipes, search_query="vegan")
         return recipes[0].url if recipes else None
 
     elif sensor_type == "search":
-        search_params = {
-            "search_query": sensor_config.get("search_query"),
+        search_query = sensor_config.get("search_query", "")
+        init_params = {
             "category": sensor_config.get("category"),
             "difficulty": sensor_config.get("difficulty")
         }
-        # Filter out None values
-        search_params = {k: v for k, v in search_params.items() if v is not None}
+        # Filter out None or empty values for the constructor
+        init_params = {k: v for k, v in init_params.items() if v}
 
-        retriever = SearchRetriever(**search_params)
-        recipes = await asyncio.to_thread(retriever.get_recipes)
+        retriever = SearchRetriever(**init_params)
+        recipes = await asyncio.to_thread(retriever.get_recipes, search_query=search_query)
         return recipes[0].url if recipes else None
 
     return None
@@ -80,6 +80,7 @@ def extract_recipe_attributes(recipe_url):
     """Extract all attributes from a recipe URL."""
     try:
         recipe = Recipe(recipe_url)
+        # Corrected attribute names from camelCase to snake_case
         return {
             "title": getattr(recipe, 'title', 'Unknown'),
             "url": recipe.url,

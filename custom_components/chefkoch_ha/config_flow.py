@@ -3,6 +3,7 @@ import voluptuous as vol
 import uuid
 from homeassistant import config_entries
 from homeassistant.core import callback
+import homeassistant.helpers.config_validation as cv
 from .const import DOMAIN
 
 class ChefkochConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -15,7 +16,6 @@ class ChefkochConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if self._async_current_entries():
             return self.async_abort(reason="single_instance_allowed")
 
-        # Create the main entry that will hold sensor configurations in its options
         return self.async_create_entry(title="Chefkoch", data={}, options={"sensors": []})
 
     @staticmethod
@@ -36,11 +36,12 @@ class ChefkochOptionsFlowHandler(config_entries.OptionsFlow):
 
     async def async_step_init(self, user_input=None):
         """Manage the options menu."""
-        menu_options = ["add_sensor", "edit_sensor", "remove_sensor"]
+        menu_options = ["add_sensor"]
+        if self.current_sensors:
+             menu_options.extend(["edit_sensor", "remove_sensor"])
 
-        # Add default sensors option only if they don't exist
         default_ids = {"random", "daily", "vegan"}
-        current_ids = {s.get("id", s.get("type")) for s in self.current_sensors}
+        current_ids = {s.get("id") for s in self.current_sensors}
         if not default_ids.issubset(current_ids):
             menu_options.insert(0, "add_defaults")
 
@@ -57,7 +58,7 @@ class ChefkochOptionsFlowHandler(config_entries.OptionsFlow):
             {"type": "vegan", "id": "vegan", "name": "Chefkoch Vegan Recipe"}
         ]
 
-        current_ids = {s.get("id", s.get("type")) for s in self.current_sensors}
+        current_ids = {s.get("id") for s in self.current_sensors}
         new_sensors = [s for s in default_sensors if s["id"] not in current_ids]
 
         updated_sensors = self.current_sensors + new_sensors
@@ -84,16 +85,13 @@ class ChefkochOptionsFlowHandler(config_entries.OptionsFlow):
                 vol.Required("name"): str,
                 vol.Optional("search_query"): str,
                 vol.Optional("category"): str,
-                vol.Optional("difficulty"): vol.In(['Einfach', 'Normal', 'Schwer']),
+                vol.Optional("difficulty"): vol.In(['', 'Einfach', 'Normal', 'Schwer']),
             }),
             last_step=True
         )
 
     async def async_step_edit_sensor(self, user_input=None):
         """Show a list of sensors to edit."""
-        if not self.current_sensors:
-            return self.async_abort(reason="no_sensors")
-
         if user_input is not None:
             self.sensor_to_edit_id = user_input["sensor_id"]
             return await self.async_step_edit_sensor_form()
@@ -106,10 +104,11 @@ class ChefkochOptionsFlowHandler(config_entries.OptionsFlow):
 
     async def async_step_edit_sensor_form(self, user_input=None):
         """Show the form to edit a sensor's details."""
-        sensor_to_edit = next(s for s in self.current_sensors if s["id"] == self.sensor_to_edit_id)
+        sensor_to_edit = next((s for s in self.current_sensors if s["id"] == self.sensor_to_edit_id), None)
+        if not sensor_to_edit:
+             return self.async_abort(reason="no_sensors") # Should not happen
 
         if user_input is not None:
-            # Update the sensor's data
             sensor_to_edit.update({
                 "name": user_input["name"],
                 "search_query": user_input.get("search_query", ""),
@@ -118,12 +117,11 @@ class ChefkochOptionsFlowHandler(config_entries.OptionsFlow):
             })
             return self.async_create_entry(title="", data={"sensors": self.current_sensors})
 
-        # Pre-fill form with existing data
         schema = vol.Schema({
             vol.Required("name", default=sensor_to_edit.get("name")): str,
             vol.Optional("search_query", default=sensor_to_edit.get("search_query")): str,
             vol.Optional("category", default=sensor_to_edit.get("category")): str,
-            vol.Optional("difficulty", default=sensor_to_edit.get("difficulty")): vol.In(['Einfach', 'Normal', 'Schwer']),
+            vol.Optional("difficulty", default=sensor_to_edit.get("difficulty")): vol.In(['', 'Einfach', 'Normal', 'Schwer']),
         })
 
         return self.async_show_form(
@@ -134,11 +132,7 @@ class ChefkochOptionsFlowHandler(config_entries.OptionsFlow):
 
     async def async_step_remove_sensor(self, user_input=None):
         """Handle sensor removal."""
-        if not self.current_sensors:
-            return self.async_abort(reason="no_sensors")
-
         if user_input is not None:
-            # Remove all selected sensors
             sensors_to_remove = user_input["sensors_to_remove"]
             updated_sensors = [s for s in self.current_sensors if s["id"] not in sensors_to_remove]
             return self.async_create_entry(title="", data={"sensors": updated_sensors})
