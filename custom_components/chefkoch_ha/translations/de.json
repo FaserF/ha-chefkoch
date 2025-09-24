@@ -25,13 +25,14 @@
         "data": {
           "name": "Sensorname (z.B. 'Kuchen')",
           "search_query": "Suchbegriff (z.B. 'Käsekuchen')",
-          "category": "Kategorie (optional)"
-        }
-      },
-      "edit_sensor": {
-        "title": "Sensor zum Bearbeiten auswählen",
-        "data": {
-          "sensor_id": "Sensor"
+          "properties": "Eigenschaften (z.B. Einfach, Schnell), kommagetrennt",
+          "health": "Ernährungsform (z.B. Vegan, Low Carb), kommagetrennt",
+          "categories": "Kategorien (z.B. Pizza), kommagetrennt",
+          "countries": "Länder (z.B. Italien), kommagetrennt",
+          "meal_type": "Mahlzeit (z.B. Hauptspeise), kommagetrennt",
+          "prep_times": "Max. Zubereitungszeit (Minuten)",
+          "ratings": "Mindestbewertung (Sterne)",
+          "sort": "Sortieren nach"
         }
       },
       "edit_sensor_form": {
@@ -39,18 +40,18 @@
         "data": {
           "name": "Sensorname",
           "search_query": "Suchbegriff",
-          "category": "Kategorie"
-        }
-      },
-      "remove_sensor": {
-        "title": "Sensoren entfernen",
-        "data": {
-          "sensors_to_remove": "Sensoren zum Entfernen auswählen"
+          "properties": "Eigenschaften, kommagetrennt",
+          "health": "Ernährungsform, kommagetrennt",
+          "categories": "Kategorien, kommagetrennt",
+          "countries": "Länder, kommagetrennt",
+          "meal_type": "Mahlzeit, kommagetrennt",
+          "prep_times": "Max. Zubereitungszeit (Minuten)",
+          "ratings": "Mindestbewertung (Sterne)",
+          "sort": "Sortieren nach"
         }
       }
     },
     "abort": {
-      "no_sensors": "Es sind keine Sensoren zum Bearbeiten oder Entfernen vorhanden.",
       "no_custom_sensors": "Es sind keine benutzerdefinierten Sensoren zum Bearbeiten oder Entfernen vorhanden."
     }
   }

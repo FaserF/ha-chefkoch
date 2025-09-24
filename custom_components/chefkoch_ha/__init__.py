@@ -2,7 +2,7 @@ import asyncio
 import logging
 from datetime import timedelta
 from homeassistant import config_entries, core
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from chefkoch.retrievers import DailyRecipeRetriever, RandomRetriever, SearchRetriever
 from chefkoch import Recipe
 
@@ -22,7 +22,6 @@ async def async_update_data(hass: core.HomeAssistant, entry: config_entries.Conf
 
     async def fetch_and_process_sensor(sensor_config):
         sensor_id = sensor_config["id"]
-
         try:
             recipe_url = await _fetch_recipe_url(sensor_config)
             if recipe_url:
@@ -37,7 +36,6 @@ async def async_update_data(hass: core.HomeAssistant, entry: config_entries.Conf
 
     tasks = [fetch_and_process_sensor(s) for s in sensors]
     await asyncio.gather(*tasks)
-
     return data
 
 async def _fetch_recipe_url(sensor_config: dict) -> str | None:
@@ -61,13 +59,25 @@ async def _fetch_recipe_url(sensor_config: dict) -> str | None:
 
     elif sensor_type == "search":
         search_query = sensor_config.get("search_query", "")
+
+        # Helper to parse comma-separated strings into lists
+        def parse_list(key):
+            value = sensor_config.get(key, "")
+            return [item.strip() for item in value.split(',') if item.strip()] if value else None
+
         init_params = {
-            "category": sensor_config.get("category"),
+            "properties": parse_list("properties"),
+            "health": parse_list("health"),
+            "categories": parse_list("categories"),
+            "countries": parse_list("countries"),
+            "meal_type": parse_list("meal_type"),
+            "prep_times": sensor_config.get("prep_times"),
+            "ratings": sensor_config.get("ratings"),
+            "sort": sensor_config.get("sort")
         }
+
         init_params = {k: v for k, v in init_params.items() if v}
 
-        # The 'difficulty' parameter is not supported by the library version used.
-        # It has been removed to prevent crashes.
         retriever = SearchRetriever(**init_params)
         recipes = await asyncio.to_thread(retriever.get_recipes, search_query=search_query)
         return recipes[0].url if recipes and recipes[0] else None
@@ -77,28 +87,18 @@ async def _fetch_recipe_url(sensor_config: dict) -> str | None:
 def extract_recipe_attributes(recipe_url):
     """Extract all attributes from a recipe URL robustly."""
     try:
-        # This is the critical call that can fail due to website changes.
         recipe = Recipe(recipe_url)
     except Exception as e:
         _LOGGER.error("Failed to initialize Recipe object for URL %s: %s", recipe_url, e)
-        # Return minimal data so the sensor entity doesn't fail completely.
-        return {
-            "title": "Error loading recipe details",
-            "url": recipe_url,
-            "status": "error",
-            "error_message": f"Could not parse recipe page: {e}"
-        }
+        return {"title": "Error loading recipe details", "url": recipe_url, "status": "error", "error_message": f"Could not parse recipe page: {e}"}
 
     def safe_get_attr(recipe_obj, attr_name, default=None):
-        """Safely get an attribute, returning default if it fails for any reason."""
         try:
             return getattr(recipe_obj, attr_name)
         except Exception:
-            # This will catch KeyErrors, IndexErrors, TypeErrors, etc.
             _LOGGER.debug("Could not get attribute '%s' for recipe %s", attr_name, recipe_obj.url)
             return default
 
-    # If Recipe object was created successfully, extract attributes safely.
     return {
         "title": safe_get_attr(recipe, 'title', 'Title not found'),
         "url": recipe.url,
@@ -121,22 +121,15 @@ def extract_recipe_attributes(recipe_url):
 async def async_setup_entry(hass: core.HomeAssistant, entry: config_entries.ConfigEntry) -> bool:
     """Set up platform from a ConfigEntry."""
     hass.data.setdefault(DOMAIN, {})
-
     coordinator = DataUpdateCoordinator(
-        hass,
-        _LOGGER,
-        name="Chefkoch Recipe Coordinator",
+        hass, _LOGGER, name="Chefkoch Recipe Coordinator",
         update_method=lambda: async_update_data(hass, entry),
         update_interval=SCAN_INTERVAL,
     )
-
     await coordinator.async_config_entry_first_refresh()
-
     hass.data[DOMAIN][entry.entry_id] = {"coordinator": coordinator}
-
     entry.async_on_unload(entry.add_update_listener(options_update_listener))
     await hass.config_entries.async_forward_entry_setups(entry, ["sensor"])
-
     return True
 
 async def options_update_listener(hass: core.HomeAssistant, config_entry: config_entries.ConfigEntry):

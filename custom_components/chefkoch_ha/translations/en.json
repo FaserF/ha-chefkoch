@@ -25,13 +25,14 @@
         "data": {
           "name": "Sensor Name (e.g., 'Cakes')",
           "search_query": "Search Term (e.g., 'Cheesecake')",
-          "category": "Category (optional)"
-        }
-      },
-      "edit_sensor": {
-        "title": "Select Sensor to Edit",
-        "data": {
-          "sensor_id": "Sensor"
+          "properties": "Properties (e.g. Simple, Quick), comma-separated",
+          "health": "Diet (e.g. Vegan, Low Carb), comma-separated",
+          "categories": "Categories (e.g. Pizza), comma-separated",
+          "countries": "Countries (e.g. Italy), comma-separated",
+          "meal_type": "Meal Type (e.g. Main Dish), comma-separated",
+          "prep_times": "Max. Preparation Time (Minutes)",
+          "ratings": "Minimum Rating (Stars)",
+          "sort": "Sort by"
         }
       },
       "edit_sensor_form": {
@@ -39,18 +40,18 @@
         "data": {
           "name": "Sensor Name",
           "search_query": "Search Term",
-          "category": "Category"
-        }
-      },
-      "remove_sensor": {
-        "title": "Remove Sensors",
-        "data": {
-          "sensors_to_remove": "Select sensors to remove"
+          "properties": "Properties, comma-separated",
+          "health": "Diet, comma-separated",
+          "categories": "Categories, comma-separated",
+          "countries": "Countries, comma-separated",
+          "meal_type": "Meal Type, comma-separated",
+          "prep_times": "Max. Preparation Time (Minutes)",
+          "ratings": "Minimum Rating (Stars)",
+          "sort": "Sort by"
         }
       }
     },
     "abort": {
-      "no_sensors": "There are no sensors to edit or remove.",
       "no_custom_sensors": "There are no custom sensors to edit or remove."
     }
   }
