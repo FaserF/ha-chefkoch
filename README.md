@@ -47,16 +47,17 @@ You can create sensors that match your exact needs.
 3. Select "Add a new Search Sensor".
 4. Fill out the form with your desired filters.
 
-### Available Filters
+### Available Filters (the filters have to be in german)
+[Full details here](https://github.com/M-Enderle/chefkoch?tab=readme-ov-file#available-filter-options)
 - Sensor Name: A friendly name for your sensor (e.g., "Quick Pasta Dishes"). The entity ID will be generated from this.
 - Search Term: The main keyword for your search (e.g., "Lasagne").
-- Properties: Add tags like Simple, Quick, Party. Separate multiple values with a comma.
-- Diet: Filter for dietary restrictions like Vegan, Vegetarian, Low Carb. Comma-separated.
-- Categories: Filter by recipe categories like Pizza, Salad. Comma-separated.
-- Countries: Find recipes from specific countries like Italy, German. Comma-separated.
-- Meal Type: Filter by meal types such as Main Dish, Dessert. Comma-separated.
+- Properties: Einfach, Schnell, Basisrezepte, Preiswert. Separate multiple values with a comma.
+- Diet: Vegetarisch, Vegan, Kalorienarm, Low Carb, Ketogen, Paleo, Fettarm, Trennkost, Vollwert. Comma-separated.
+- Categories: Auflauf, Pizza, Reis- oder Nudelsalat, Salat, Salatdressing, Tarte, Fingerfood, Dips, Saucen, Suppe, Klöße, Brot und Brötchen, Brotspeise, Aufstrich, Süßspeise, Eis, Kuchen, Kekse, Torte, Confiserie, Getränke, Shake, Gewürzmischung, Pasten, Studentenküche. Comma-separated.
+- Countries: Deutschland, Italien, Spanien, Portugal, Frankreich, England, Osteuropa, Skandinavien, Griechenland, Türkei, Russland, Naher Osten, Asien, Indien, Japan, Amerika, Mexiko, Karibik, Lateinamerika, Afrika, Marokko, Ägypten, Australien. Comma-separated.
+- Meal Type: Hauptspeise, Vorspeise, Beilage, Dessert, Snack, Frühstück Comma-separated.
 - Max. Preparation Time: Choose a maximum preparation time in minutes.
-- Minimum Rating: Set a minimum star rating.
+- Minimum Rating: Set a minimum star rating: Alle, 2, 3, 4, Top
 
 You can add, edit, or remove your custom search sensors at any time through the same Configure menu.
 
