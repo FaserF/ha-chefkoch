@@ -92,19 +92,33 @@ async def _fetch_recipe_url(sensor_config: dict) -> str | None:
 def extract_recipe_attributes(recipe_url):
     """Extract all attributes from a recipe URL robustly."""
     try:
+        # Initialize Recipe object from the dependency
         recipe = Recipe(recipe_url)
+        # Log the raw recipe data for debugging purposes.
+        # This helps to see all the data that the dependency provides.
+        # Using vars() attempts to get a dict representation of the object.
+        _LOGGER.debug("Successfully initialized Recipe object for URL %s. Full data: %s", recipe_url, vars(recipe))
     except Exception as e:
         _LOGGER.error("Failed to initialize Recipe object for URL %s: %s", recipe_url, e)
         return {"title": "Error loading recipe details", "url": recipe_url, "status": "error", "error_message": f"Could not parse recipe page: {e}"}
 
     def safe_get_attr(recipe_obj, attr_name, default=None):
+        """Safely get an attribute from the recipe object, logging an error if it fails."""
         try:
+            # Attempt to get the attribute
             return getattr(recipe_obj, attr_name)
-        except Exception:
-            _LOGGER.debug("Could not get attribute '%s' for recipe %s", attr_name, recipe_obj.url)
+        except Exception as e:
+            # Log a debug message if an attribute is missing or an error occurs during retrieval.
+            _LOGGER.debug(
+                "Could not get attribute '%s' for recipe %s. Error: %s",
+                attr_name,
+                recipe_obj.url,
+                e
+            )
             return default
 
-    return {
+    # Extract all attributes and build the data dictionary
+    attributes = {
         "title": safe_get_attr(recipe, 'title', 'Title not found'),
         "url": recipe.url,
         "image_url": safe_get_attr(recipe, 'image_url', ''),
@@ -122,6 +136,11 @@ def extract_recipe_attributes(recipe_url):
         "rating_count": (safe_get_attr(recipe, 'rating') or {}).get('count'),
         "status": "success",
     }
+
+    # Log the final extracted attributes for debugging.
+    _LOGGER.debug("Extracted attributes for recipe %s: %s", recipe.url, attributes)
+
+    return attributes
 
 async def async_setup_entry(hass: core.HomeAssistant, entry: config_entries.ConfigEntry) -> bool:
     """Set up platform from a ConfigEntry."""
