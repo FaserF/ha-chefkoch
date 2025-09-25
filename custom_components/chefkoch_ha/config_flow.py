@@ -62,7 +62,7 @@ class ChefkochConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 class ChefkochOptionsFlowHandler(config_entries.OptionsFlow):
     def __init__(self, config_entry: config_entries.ConfigEntry):
-        self.config_entry = config_entry
+        super().__init__(config_entry)
         self.current_sensors = self.config_entry.options.get("sensors", [])
         self.sensor_to_edit_id = None
 
