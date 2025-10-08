@@ -7,3 +7,5 @@ DEFAULT_SENSORS = [
     {"type": "vegan", "id": "vegan", "name": "Chefkoch Vegan Recipe"},
     {"type": "baking", "id": "baking", "name": "Chefkoch Random Baking Recipe"},
 ]
+
+DEFAULT_UPDATE_INTERVAL = 24  # in hours

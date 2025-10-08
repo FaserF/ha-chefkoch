@@ -6,10 +6,9 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from chefkoch.retrievers import DailyRecipeRetriever, RandomRetriever, SearchRetriever
 from chefkoch import Recipe
 
-from .const import DOMAIN
+from .const import DOMAIN, DEFAULT_UPDATE_INTERVAL
 
 _LOGGER = logging.getLogger(__name__)
-SCAN_INTERVAL = timedelta(days=1)
 
 
 async def async_update_data(hass: core.HomeAssistant, entry: config_entries.ConfigEntry):
@@ -172,10 +171,14 @@ def extract_recipe_attributes(recipe_url):
 async def async_setup_entry(hass: core.HomeAssistant, entry: config_entries.ConfigEntry) -> bool:
     """Set up platform from a ConfigEntry."""
     hass.data.setdefault(DOMAIN, {})
+
+    update_interval_hours = entry.options.get("update_interval", DEFAULT_UPDATE_INTERVAL)
+    scan_interval = timedelta(hours=update_interval_hours)
+
     coordinator = DataUpdateCoordinator(
         hass, _LOGGER, name="Chefkoch Recipe Coordinator",
         update_method=lambda: async_update_data(hass, entry),
-        update_interval=SCAN_INTERVAL,
+        update_interval=scan_interval,
     )
     await coordinator.async_config_entry_first_refresh()
     hass.data[DOMAIN][entry.entry_id] = {"coordinator": coordinator}

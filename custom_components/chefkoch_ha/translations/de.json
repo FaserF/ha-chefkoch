@@ -3,7 +3,10 @@
     "step": {
       "user": {
         "title": "Chefkoch einrichten",
-        "description": "Bestätigen, um die Chefkoch-Integration einzurichten.\n\nDadurch werden vier Standard-Sensoren erstellt (Zufälliges Rezept, Tägliches Rezept, Veganes Rezept, Zufälliges Backrezept).\n\nEigene Such-Sensoren können später über 'Konfigurieren' bei der Integration hinzugefügt werden."
+        "description": "Bestätigen, um die Chefkoch-Integration einzurichten.\n\nDadurch werden vier Standard-Sensoren erstellt (Zufälliges Rezept, Tägliches Rezept, Veganes Rezept, Zufälliges Backrezept).\n\nEigene Such-Sensoren können später über 'Konfigurieren' bei der Integration hinzugefügt werden.",
+        "data": {
+          "update_interval": "Aktualisierungsintervall (Stunden)"
+        }
       }
     },
     "abort": {
@@ -17,7 +20,14 @@
         "menu_options": {
           "add_sensor": "Neuen Such-Sensor hinzufügen",
           "edit_sensor": "Bestehenden Such-Sensor bearbeiten",
-          "remove_sensor": "Such-Sensor entfernen"
+          "remove_sensor": "Such-Sensor entfernen",
+          "update_interval": "Aktualisierungsintervall ändern"
+        }
+      },
+      "update_interval": {
+        "title": "Aktualisierungsintervall festlegen",
+        "data": {
+          "update_interval": "Aktualisierungsintervall in Stunden (mindestens 1)"
         }
       },
       "add_sensor": {

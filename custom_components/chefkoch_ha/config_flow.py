@@ -3,7 +3,7 @@ import uuid
 from homeassistant import config_entries
 from homeassistant.core import callback
 import homeassistant.helpers.config_validation as cv
-from .const import DOMAIN, DEFAULT_SENSORS
+from .const import DOMAIN, DEFAULT_SENSORS, DEFAULT_UPDATE_INTERVAL
 
 # Define the available filter options for the user
 PROPERTIES_OPTIONS = ["Einfach", "Schnell", "Basisrezepte", "Preiswert"]
@@ -52,8 +52,24 @@ class ChefkochConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if self._async_current_entries():
             return self.async_abort(reason="single_instance_allowed")
         if user_input is not None:
-            return self.async_create_entry(title="Chefkoch", data={}, options={"sensors": DEFAULT_SENSORS})
-        return self.async_show_form(step_id="user")
+            return self.async_create_entry(
+                title="Chefkoch",
+                data={},
+                options={
+                    "sensors": DEFAULT_SENSORS,
+                    "update_interval": user_input.get("update_interval", DEFAULT_UPDATE_INTERVAL),
+                },
+            )
+
+        data_schema = vol.Schema(
+            {
+                vol.Optional(
+                    "update_interval", default=DEFAULT_UPDATE_INTERVAL
+                ): vol.All(vol.Coerce(int), vol.Range(min=1)),
+            }
+        )
+
+        return self.async_show_form(step_id="user", data_schema=data_schema)
 
     @staticmethod
     @callback
@@ -65,6 +81,7 @@ class ChefkochOptionsFlowHandler(config_entries.OptionsFlow):
         self.config_entry = config_entry
         self.current_sensors = self.config_entry.options.get("sensors", [])
         self.sensor_to_edit_id = None
+        self.data = dict(self.config_entry.options)
 
     def _process_user_input(self, user_input):
         """Process user input to convert lists to strings and handle special values for storage."""
@@ -93,18 +110,37 @@ class ChefkochOptionsFlowHandler(config_entries.OptionsFlow):
         return processed_input
 
     async def async_step_init(self, user_input=None):
-        menu_options = ["add_sensor"]
+        menu_options = ["update_interval", "add_sensor"]
         custom_sensors = [s for s in self.current_sensors if s.get("type") == "search"]
         if custom_sensors:
             menu_options.extend(["edit_sensor", "remove_sensor"])
         return self.async_show_menu(step_id="init", menu_options=menu_options)
+
+    async def async_step_update_interval(self, user_input=None):
+        """Handle update interval setup."""
+        if user_input is not None:
+            self.data["update_interval"] = user_input["update_interval"]
+            return self.async_create_entry(title="", data=self.data)
+
+        return self.async_show_form(
+            step_id="update_interval",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(
+                        "update_interval",
+                        default=self.config_entry.options.get("update_interval", DEFAULT_UPDATE_INTERVAL),
+                    ): vol.All(vol.Coerce(int), vol.Range(min=1)),
+                }
+            ),
+        )
 
     async def async_step_add_sensor(self, user_input=None):
         if user_input is not None:
             processed_input = self._process_user_input(user_input)
             new_sensor = {"id": str(uuid.uuid4()), "type": "search", **processed_input}
             updated_sensors = self.current_sensors + [new_sensor]
-            return self.async_create_entry(title="", data={"sensors": updated_sensors})
+            self.data["sensors"] = updated_sensors
+            return self.async_create_entry(title="", data=self.data)
         return self.async_show_form(step_id="add_sensor", data_schema=get_search_schema(), last_step=True)
 
     async def async_step_edit_sensor(self, user_input=None):
@@ -124,7 +160,8 @@ class ChefkochOptionsFlowHandler(config_entries.OptionsFlow):
         if user_input is not None:
             processed_input = self._process_user_input(user_input)
             sensor_to_edit.update(processed_input)
-            return self.async_create_entry(title="", data={"sensors": self.current_sensors})
+            self.data["sensors"] = self.current_sensors
+            return self.async_create_entry(title="", data=self.data)
 
         # Prepare the data to be displayed in the form, mapping stored values back to form options
         form_data = sensor_to_edit.copy()
@@ -153,7 +190,8 @@ class ChefkochOptionsFlowHandler(config_entries.OptionsFlow):
         if user_input is not None:
             sensors_to_remove = user_input["sensors_to_remove"]
             updated_sensors = [s for s in self.current_sensors if s["id"] not in sensors_to_remove]
-            return self.async_create_entry(title="", data={"sensors": updated_sensors})
+            self.data["sensors"] = updated_sensors
+            return self.async_create_entry(title="", data=self.data)
         return self.async_show_form(
             step_id="remove_sensor",
             data_schema=vol.Schema({vol.Required("sensors_to_remove"): cv.multi_select(custom_sensors)}),
