@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Chefkoch einrichten",
-        "description": "Bestätigen, um die Chefkoch-Integration einzurichten.\n\nDadurch werden drei Standard-Sensoren erstellt (Zufälliges Rezept, Tägliches Rezept, Veganes Rezept).\n\nEigene Such-Sensoren können später über 'Konfigurieren' bei der Integration hinzugefügt werden."
+        "description": "Bestätigen, um die Chefkoch-Integration einzurichten.\n\nDadurch werden vier Standard-Sensoren erstellt (Zufälliges Rezept, Tägliches Rezept, Veganes Rezept, Zufälliges Backrezept).\n\nEigene Such-Sensoren können später über 'Konfigurieren' bei der Integration hinzugefügt werden."
       }
     },
     "abort": {
@@ -25,11 +25,11 @@
         "data": {
           "name": "Sensorname (z.B. 'Kuchen')",
           "search_query": "Suchbegriff (z.B. 'Käsekuchen')",
-          "properties": "Eigenschaften (z.B. Einfach, Schnell), kommagetrennt",
-          "health": "Ernährungsform (z.B. Vegan, Low Carb), kommagetrennt",
-          "categories": "Kategorien (z.B. Pizza), kommagetrennt",
-          "countries": "Länder (z.B. Italien), kommagetrennt",
-          "meal_type": "Mahlzeit (z.B. Hauptspeise), kommagetrennt",
+          "properties": "Eigenschaften (z.B. Einfach, Schnell)",
+          "health": "Ernährungsform (z.B. Vegan, Low Carb)",
+          "categories": "Kategorien (z.B. Pizza)",
+          "countries": "Länder (z.B. Italien)",
+          "meal_type": "Mahlzeit (z.B. Hauptspeise)",
           "prep_times": "Max. Zubereitungszeit (Minuten)",
           "ratings": "Mindestbewertung (Sterne)",
           "sort": "Sortieren nach"
@@ -46,11 +46,11 @@
         "data": {
           "name": "Sensorname",
           "search_query": "Suchbegriff",
-          "properties": "Eigenschaften, kommagetrennt",
-          "health": "Ernährungsform, kommagetrennt",
-          "categories": "Kategorien, kommagetrennt",
-          "countries": "Länder, kommagetrennt",
-          "meal_type": "Mahlzeit, kommagetrennt",
+          "properties": "Eigenschaften",
+          "health": "Ernährungsform",
+          "categories": "Kategorien",
+          "countries": "Länder",
+          "meal_type": "Mahlzeit",
           "prep_times": "Max. Zubereitungszeit (Minuten)",
           "ratings": "Mindestbewertung (Sterne)",
           "sort": "Sortieren nach"

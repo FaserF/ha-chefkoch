@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Set up Chefkoch",
-        "description": "Confirm to set up the Chefkoch integration.\n\nThis will create three default sensors (Random Recipe, Daily Recipe, Vegan Recipe).\n\nCustom search sensors can be added later via 'Configure' on the integration."
+        "description": "Confirm to set up the Chefkoch integration.\n\nThis will create four default sensors (Random Recipe, Daily Recipe, Vegan Recipe, Random Baking Recipe).\n\nCustom search sensors can be added later via 'Configure' on the integration."
       }
     },
     "abort": {
@@ -25,11 +25,11 @@
         "data": {
           "name": "Sensor Name (e.g., 'Cakes')",
           "search_query": "Search Term (e.g., 'Cheesecake')",
-          "properties": "Properties (e.g. Simple, Quick), comma-separated",
-          "health": "Diet (e.g. Vegan, Low Carb), comma-separated",
-          "categories": "Categories (e.g. Pizza), comma-separated",
-          "countries": "Countries (e.g. Italy), comma-separated",
-          "meal_type": "Meal Type (e.g. Main Dish), comma-separated",
+          "properties": "Properties (e.g. Simple, Quick)",
+          "health": "Diet (e.g. Vegan, Low Carb)",
+          "categories": "Categories (e.g. Pizza)",
+          "countries": "Countries (e.g. Italy)",
+          "meal_type": "Meal Type (e.g. Main Dish)",
           "prep_times": "Max. Preparation Time (Minutes)",
           "ratings": "Minimum Rating (Stars)",
           "sort": "Sort by"
@@ -40,11 +40,11 @@
         "data": {
           "name": "Sensor Name",
           "search_query": "Search Term",
-          "properties": "Properties, comma-separated",
-          "health": "Diet, comma-separated",
-          "categories": "Categories, comma-separated",
-          "countries": "Countries, comma-separated",
-          "meal_type": "Meal Type, comma-separated",
+          "properties": "Properties",
+          "health": "Diet",
+          "categories": "Categories",
+          "countries": "Countries",
+          "meal_type": "Meal Type",
           "prep_times": "Max. Preparation Time (Minutes)",
           "ratings": "Minimum Rating (Stars)",
           "sort": "Sort by"
