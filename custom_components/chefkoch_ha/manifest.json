@@ -14,5 +14,5 @@
   "requirements": [
     "git+https://github.com/FaserF/chefkoch.git"
   ],
-  "version": "2.1.0"
+  "version": "2.0.1"
 }
