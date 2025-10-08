@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Chefkoch einrichten",
-        "description": "Bestätigen, um die Chefkoch-Integration einzurichten.\n\nDadurch werden drei Standard-Sensoren erstellt (Zufälliges Rezept, Tägliches Rezept, Veganes Rezept).\n\nEigene Such-Sensoren können später über 'Konfigurieren' bei der Integration hinzugefügt werden."
+        "description": "Bestätigen, um die Chefkoch-Integration einzurichten.\n\nDadurch werden vier Standard-Sensoren erstellt (Zufälliges Rezept, Tägliches Rezept, Veganes Rezept, Zufälliges Backrezept).\n\nEigene Such-Sensoren können später über 'Konfigurieren' bei der Integration hinzugefügt werden."
       }
     },
     "abort": {

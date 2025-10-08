@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Set up Chefkoch",
-        "description": "Confirm to set up the Chefkoch integration.\n\nThis will create three default sensors (Random Recipe, Daily Recipe, Vegan Recipe).\n\nCustom search sensors can be added later via 'Configure' on the integration."
+        "description": "Confirm to set up the Chefkoch integration.\n\nThis will create four default sensors (Random Recipe, Daily Recipe, Vegan Recipe, Random Baking Recipe).\n\nCustom search sensors can be added later via 'Configure' on the integration."
       }
     },
     "abort": {

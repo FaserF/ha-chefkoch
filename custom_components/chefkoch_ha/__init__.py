@@ -58,6 +58,11 @@ async def _fetch_recipe_url(sensor_config: dict) -> str | None:
             recipes = await asyncio.to_thread(retriever.get_recipes, search_query="vegan")
             return recipes[0].url if recipes and recipes[0] else None
 
+        elif sensor_type == "baking":
+            retriever = DailyRecipeRetriever()
+            recipes = await asyncio.to_thread(retriever.get_recipes, type="backen")
+            return recipes[0].url if recipes and recipes[0] else None
+
         elif sensor_type == "search":
             search_query = sensor_config.get("search_query", "")
 
@@ -118,8 +123,12 @@ def extract_recipe_attributes(recipe_url):
             return default
 
     # Extract all attributes and build the data dictionary
+    title = safe_get_attr(recipe, 'title', 'Title not found')
+    # Remove author from title if present
+    title = title.split(" von ")[0]
+
     attributes = {
-        "title": safe_get_attr(recipe, 'title', 'Title not found'),
+        "title": title,
         "url": recipe.url,
         "image_url": safe_get_attr(recipe, 'image_url', ''),
         "calories": safe_get_attr(recipe, 'calories', ''),
