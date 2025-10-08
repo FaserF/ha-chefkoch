@@ -3,7 +3,10 @@
     "step": {
       "user": {
         "title": "Set up Chefkoch",
-        "description": "Confirm to set up the Chefkoch integration.\n\nThis will create four default sensors (Random Recipe, Daily Recipe, Vegan Recipe, Random Baking Recipe).\n\nCustom search sensors can be added later via 'Configure' on the integration."
+        "description": "Confirm to set up the Chefkoch integration.\n\nThis will create four default sensors (Random Recipe, Daily Recipe, Vegan Recipe, Random Baking Recipe).\n\nCustom search sensors can be added later via 'Configure' on the integration.",
+        "data": {
+          "update_interval": "Update interval (hours)"
+        }
       }
     },
     "abort": {
@@ -17,7 +20,14 @@
         "menu_options": {
           "add_sensor": "Add a new Search Sensor",
           "edit_sensor": "Edit an existing Search Sensor",
-          "remove_sensor": "Remove a Search Sensor"
+          "remove_sensor": "Remove a Search Sensor",
+          "update_interval": "Change update interval"
+        }
+      },
+      "update_interval": {
+        "title": "Set Update Interval",
+        "data": {
+          "update_interval": "Update interval in hours (minimum 1)"
         }
       },
       "add_sensor": {
