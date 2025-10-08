@@ -35,10 +35,11 @@ where `<config>` is your Home Assistant configuration directory.
 Go to Configuration -> Integrations and click on "add integration". Then search for "Chefkoch".
 
 ## Accessing the data
-There will be three new sensors after adding it via HA:
+There will be four new sensors after adding it via HA:
 - sensor.chefkoch_random_recipe: Random recipe
 - sensor.chefkoch_daily_recipe: Daily recipe recommendation from chefkoch
 - sensor.chefkoch_vegan_recipe: Vegan recipe
+- sensor.chefkoch_random_baking_recipe: Random baking recipe
 
 ## Creating Custom Search Sensors
 You can create sensors that match your exact needs.
