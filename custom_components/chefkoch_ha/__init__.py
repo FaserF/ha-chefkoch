@@ -122,20 +122,38 @@ def extract_recipe_attributes(recipe_url):
         "title": safe_get_attr(recipe, 'title', 'Title not found'),
         "url": recipe.url,
         "image_url": safe_get_attr(recipe, 'image_url', ''),
-        "totalTime": safe_get_attr(recipe, 'total_time', '0'),
-        "prepTime": safe_get_attr(recipe, 'prep_time', ''),
-        "cookTime": safe_get_attr(recipe, 'cook_time', ''),
-        "restTime": safe_get_attr(recipe, 'rest_time', ''),
         "calories": safe_get_attr(recipe, 'calories', ''),
         "difficulty": safe_get_attr(recipe, 'difficulty', ''),
         "ingredients": safe_get_attr(recipe, 'ingredients', []),
         "instructions": safe_get_attr(recipe, 'instructions', ''),
         "category": safe_get_attr(recipe, 'category', ''),
         "servings": safe_get_attr(recipe, 'servings', ''),
-        "rating": (safe_get_attr(recipe, 'rating') or {}).get('rating'),
-        "rating_count": (safe_get_attr(recipe, 'rating') or {}).get('count'),
         "status": "success",
     }
+
+    # Handle time attributes by converting timedelta to string
+    total_time = safe_get_attr(recipe, 'total_time')
+    attributes["totalTime"] = str(total_time) if total_time else ''
+
+    prep_time = safe_get_attr(recipe, 'prep_time')
+    attributes["prepTime"] = str(prep_time) if prep_time else ''
+
+    cook_time = safe_get_attr(recipe, 'cook_time')
+    attributes["cookTime"] = str(cook_time) if cook_time else ''
+
+    rest_time = safe_get_attr(recipe, 'rest_time')
+    attributes["restTime"] = str(rest_time) if rest_time else ''
+
+    # Handle rating separately to avoid the AttributeError
+    rating_info = safe_get_attr(recipe, 'rating')
+    if isinstance(rating_info, dict):
+        attributes['rating'] = rating_info.get('rating')
+        attributes['rating_count'] = rating_info.get('count')
+    else:
+        # If it's not a dict, it might be the float value directly
+        attributes['rating'] = rating_info
+        attributes['rating_count'] = None
+
 
     # Log the final extracted attributes for debugging.
     _LOGGER.debug("Extracted attributes for recipe %s: %s", recipe.url, attributes)

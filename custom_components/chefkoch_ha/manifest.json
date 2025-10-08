@@ -12,7 +12,7 @@
     "python-chefkoch"
   ],
   "requirements": [
-    "python-chefkoch==2.1.0"
+    "git+https://github.com/FaserF/chefkoch.git"
   ],
-  "version": "2.0.1"
+  "version": "2.1.0"
 }
