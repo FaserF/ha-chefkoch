@@ -1,38 +1,48 @@
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
-# Chefkoch Homeassistant Sensor
-The chefkoch_ha integration provides recipes from Germany's largest cooking platform, Chefkoch.de, directly within Home Assistant. It automatically creates three standard recipe sensors and allows you to add an unlimited number of custom search sensors with powerful filters to find the perfect meal for any occasion.
-All sensors refresh automatically once a day or upon a restart of Home Assistant.
 
-## Features
-- Default Sensors: Automatically creates sensors for a random recipe, the daily recipe recommendation, and a random vegan recipe upon setup.
-- Powerful Custom Search Sensors: Create your own sensors with specific search queries and fine-grained filters.
-- Extensive Filtering: Filter recipes by properties (e.g., "Simple", "Quick"), diet (e.g., "Vegan", "Low Carb"), categories, countries, meal types, preparation time, and minimum rating.
-- Rich Attributes: Each sensor provides a wealth of information, including title, URL, image, ingredients, instructions, preparation times, calories, and ratings.
+# Chefkoch Home Assistant Sensor 👨‍🍳
 
-## Installation
-### 1. Using HACS (recommended way)
+The **Chefkoch** integration brings recipes from Germany's largest cooking platform, [Chefkoch.de](https://www.chefkoch.de/), directly into Home Assistant.
 
-This integration is NO official HACS Integration right now.
+## Features ✨
 
-Open HACS then install the "chefkoch" integration or use the link below.
+- **Daily Inspiration**: Automatically gets the 'Recipe of the Day'.
+- **Random Recipes**: Discover new meals with random recipe sensors (Standard, Vegan, Baking).
+- **Custom Search**: Create sensors for specific queries (e.g., "Lasagne", "Vegan Burger").
+- **Powerful Filtering**: Filter by diet (Vegan, Low Carb), detailed categories, origin (Italy, Asia), and more.
+- **Rich Data**: Attributes include ingredients, preparation time, nutritional info, and images.
+
+## Installation 🛠️
+
+### 1. Using HACS (Recommended)
+
+This integration works great with HACS.
+
+1.  Open HACS.
+2.  Search for "Chefkoch".
+3.  Click **Download**.
 
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=FaserF&repository=ha-chefkoch&category=integration)
 
-If you use this method, your component will always update to the latest version.
+> [!TIP]
+> HACS updates the component automatically.
 
-### 2. Manual
+### 2. Manual Installation
 
-- Download the latest zip release from [here](https://github.com/FaserF/ha-chefkoch/releases/latest)
-- Extract the zip file
-- Copy the folder "chefkoch" from within custom_components with all of its components to `<config>/custom_components/`
+1.  Download the latest [Release](https://github.com/FaserF/ha-chefkoch/releases/latest).
+2.  Extract the ZIP file.
+3.  Copy the `chefkoch` folder to `<config>/custom_components/`.
 
-where `<config>` is your Home Assistant configuration directory.
+> [!WARNING]
+> Downloading directly from `master` branch is not recommended.
 
->__NOTE__: Do not download the file by using the link above directly, the status in the "master" branch can be in development and therefore is maybe not working.
+## Configuration ⚙️
 
-## Configuration
+1.  Go to **Settings** -> **Devices & Services**.
+2.  Click **Add Integration**.
+3.  Search for "Chefkoch".
 
-Go to Configuration -> Integrations and click on "add integration". Then search for "Chefkoch".
+[![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=chefkoch)
 
 ## Accessing the data
 There will be four new sensors after adding it via HA:
