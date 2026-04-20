@@ -1,4 +1,5 @@
 """Constants for the Chefkoch integration."""
+
 DOMAIN = "chefkoch_ha"
 
 DEFAULT_SENSORS = [

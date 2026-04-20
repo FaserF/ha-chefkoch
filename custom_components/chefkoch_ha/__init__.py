@@ -14,7 +14,9 @@ from .const import DOMAIN, DEFAULT_UPDATE_INTERVAL
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_update_data(hass: core.HomeAssistant, entry: config_entries.ConfigEntry) -> dict[str, Any]:
+async def async_update_data(
+    hass: core.HomeAssistant, entry: config_entries.ConfigEntry
+) -> dict[str, Any]:
     """Fetch data from Chefkoch for all configured sensors."""
     sensors: list[dict[str, Any]] = entry.options.get("sensors", [])
     if not sensors:
@@ -29,21 +31,28 @@ async def async_update_data(hass: core.HomeAssistant, entry: config_entries.Conf
         try:
             recipe_url = await _fetch_recipe_url(sensor_config)
             if recipe_url:
-                attributes = await hass.async_add_executor_job(extract_recipe_attributes, recipe_url)
+                attributes = await hass.async_add_executor_job(
+                    extract_recipe_attributes, recipe_url
+                )
                 data[sensor_id] = attributes
             else:
                 _LOGGER.warning("No recipe found for sensor %s", sensor_name)
                 data[sensor_id] = {
                     "title": "No recipe found",
                     "status": "warning",
-                    "error_message": "No matching recipe found."
+                    "error_message": "No matching recipe found.",
                 }
         except Exception as e:
-            _LOGGER.error("Error during data fetching for sensor %s: %s", sensor_name, e, exc_info=True)
+            _LOGGER.error(
+                "Error during data fetching for sensor %s: %s",
+                sensor_name,
+                e,
+                exc_info=True,
+            )
             data[sensor_id] = {
                 "title": "Error fetching data",
                 "status": "error",
-                "error_message": str(e)
+                "error_message": str(e),
             }
 
     tasks = [fetch_and_process_sensor(s) for s in sensors]
@@ -69,7 +78,9 @@ async def _fetch_recipe_url(sensor_config: dict[str, Any]) -> str | None:
 
         elif sensor_type == "vegan":
             retriever = SearchRetriever(health=["Vegan"])
-            recipes = await asyncio.to_thread(retriever.get_recipes, search_query="vegan")
+            recipes = await asyncio.to_thread(
+                retriever.get_recipes, search_query="vegan"
+            )
             # In some cases, the search might return fewer results than expected or different structures
             return recipes[0].url if recipes and recipes[0] else None
 
@@ -86,7 +97,7 @@ async def _fetch_recipe_url(sensor_config: dict[str, Any]) -> str | None:
                 value = sensor_config.get(key, "")
                 if not value:
                     return None
-                return [item.strip() for item in value.split(',') if item.strip()]
+                return [item.strip() for item in value.split(",") if item.strip()]
 
             init_params = {
                 "properties": parse_list("properties"),
@@ -96,14 +107,16 @@ async def _fetch_recipe_url(sensor_config: dict[str, Any]) -> str | None:
                 "meal_type": parse_list("meal_type"),
                 "prep_times": sensor_config.get("prep_times"),
                 "ratings": sensor_config.get("ratings"),
-                "sort": sensor_config.get("sort")
+                "sort": sensor_config.get("sort"),
             }
 
             # Remove None values
             filtered_params = {k: v for k, v in init_params.items() if v}
 
             retriever = SearchRetriever(**filtered_params)
-            recipes = await asyncio.to_thread(retriever.get_recipes, search_query=search_query)
+            recipes = await asyncio.to_thread(
+                retriever.get_recipes, search_query=search_query
+            )
             return recipes[0].url if recipes and recipes[0] else None
 
         return None
@@ -121,12 +134,14 @@ def extract_recipe_attributes(recipe_url: str) -> dict[str, Any]:
         recipe = Recipe(recipe_url)
         _LOGGER.debug("Successfully initialized Recipe object for URL %s.", recipe_url)
     except Exception as e:
-        _LOGGER.error("Failed to initialize Recipe object for URL %s: %s", recipe_url, e)
+        _LOGGER.error(
+            "Failed to initialize Recipe object for URL %s: %s", recipe_url, e
+        )
         return {
             "title": "Error loading recipe",
             "url": recipe_url,
             "status": "error",
-            "error_message": f"Could not parse recipe page: {e}"
+            "error_message": f"Could not parse recipe page: {e}",
         }
 
     def safe_get_attr(recipe_obj: Any, attr_name: str, default: Any = None) -> Any:
@@ -136,12 +151,14 @@ def extract_recipe_attributes(recipe_url: str) -> dict[str, Any]:
         except Exception as e:
             _LOGGER.debug(
                 "Could not get attribute '%s' for recipe %s. Error: %s",
-                attr_name, recipe_obj.url, e
+                attr_name,
+                recipe_obj.url,
+                e,
             )
             return default
 
     # Extract all attributes and build the data dictionary
-    title = safe_get_attr(recipe, 'title', 'Title not found')
+    title = safe_get_attr(recipe, "title", "Title not found")
     # Cleanup titles that might include "von <User>"
     if title and " von " in title:
         title = title.split(" von ")[0]
@@ -149,48 +166,54 @@ def extract_recipe_attributes(recipe_url: str) -> dict[str, Any]:
     attributes = {
         "title": title,
         "url": recipe.url,
-        "image_url": safe_get_attr(recipe, 'image_url', ''),
-        "calories": safe_get_attr(recipe, 'calories', ''),
-        "difficulty": safe_get_attr(recipe, 'difficulty', ''),
-        "ingredients": safe_get_attr(recipe, 'ingredients', []),
-        "instructions": safe_get_attr(recipe, 'instructions', ''),
-        "category": safe_get_attr(recipe, 'category', ''),
-        "servings": safe_get_attr(recipe, 'servings', ''),
+        "image_url": safe_get_attr(recipe, "image_url", ""),
+        "calories": safe_get_attr(recipe, "calories", ""),
+        "difficulty": safe_get_attr(recipe, "difficulty", ""),
+        "ingredients": safe_get_attr(recipe, "ingredients", []),
+        "instructions": safe_get_attr(recipe, "instructions", ""),
+        "category": safe_get_attr(recipe, "category", ""),
+        "servings": safe_get_attr(recipe, "servings", ""),
         "status": "success",
     }
 
     # Handle time attributes
     for time_attr, key in [
-        ('total_time', 'totalTime'),
-        ('prep_time', 'prepTime'),
-        ('cook_time', 'cookTime'),
-        ('rest_time', 'restTime')
+        ("total_time", "totalTime"),
+        ("prep_time", "prepTime"),
+        ("cook_time", "cookTime"),
+        ("rest_time", "restTime"),
     ]:
         val = safe_get_attr(recipe, time_attr)
-        attributes[key] = str(val) if val else ''
+        attributes[key] = str(val) if val else ""
 
     # Handle rating
-    rating_info = safe_get_attr(recipe, 'rating')
+    rating_info = safe_get_attr(recipe, "rating")
     if isinstance(rating_info, dict):
-        attributes['rating'] = rating_info.get('rating')
-        attributes['rating_count'] = rating_info.get('count')
+        attributes["rating"] = rating_info.get("rating")
+        attributes["rating_count"] = rating_info.get("count")
     else:
-        attributes['rating'] = rating_info
-        attributes['rating_count'] = None
+        attributes["rating"] = rating_info
+        attributes["rating_count"] = None
 
     _LOGGER.debug("Extracted attributes for recipe %s.", recipe.url)
     return attributes
 
 
-async def async_setup_entry(hass: core.HomeAssistant, entry: config_entries.ConfigEntry) -> bool:
+async def async_setup_entry(
+    hass: core.HomeAssistant, entry: config_entries.ConfigEntry
+) -> bool:
     """Set up platform from a ConfigEntry."""
     hass.data.setdefault(DOMAIN, {})
 
-    update_interval_hours = entry.options.get("update_interval", DEFAULT_UPDATE_INTERVAL)
+    update_interval_hours = entry.options.get(
+        "update_interval", DEFAULT_UPDATE_INTERVAL
+    )
     scan_interval = timedelta(hours=update_interval_hours)
 
     coordinator = DataUpdateCoordinator(
-        hass, _LOGGER, name="Chefkoch Recipe Coordinator",
+        hass,
+        _LOGGER,
+        name="Chefkoch Recipe Coordinator",
         update_method=lambda: async_update_data(hass, entry),
         update_interval=scan_interval,
     )
@@ -205,12 +228,16 @@ async def async_setup_entry(hass: core.HomeAssistant, entry: config_entries.Conf
     return True
 
 
-async def options_update_listener(hass: core.HomeAssistant, config_entry: config_entries.ConfigEntry) -> None:
+async def options_update_listener(
+    hass: core.HomeAssistant, config_entry: config_entries.ConfigEntry
+) -> None:
     """Handle options update."""
     await hass.config_entries.async_reload(config_entry.entry_id)
 
 
-async def async_unload_entry(hass: core.HomeAssistant, entry: config_entries.ConfigEntry) -> bool:
+async def async_unload_entry(
+    hass: core.HomeAssistant, entry: config_entries.ConfigEntry
+) -> bool:
     """Unload a config entry."""
     unload_ok = await hass.config_entries.async_unload_platforms(entry, ["sensor"])
     if unload_ok:

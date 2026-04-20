@@ -1,10 +1,15 @@
 """Sensor platform for Chefkoch."""
+
 from homeassistant.components.sensor import SensorEntity
-from homeassistant.helpers.update_coordinator import CoordinatorEntity, DataUpdateCoordinator
+from homeassistant.helpers.update_coordinator import (
+    CoordinatorEntity,
+    DataUpdateCoordinator,
+)
 from .const import DOMAIN
 import logging
 
 _LOGGER = logging.getLogger(__name__)
+
 
 async def async_setup_entry(hass, entry, async_add_entities):
     """Set up the Chefkoch sensor platform."""
@@ -56,7 +61,7 @@ class ChefkochSensor(CoordinatorEntity, SensorEntity):
         attributes = {
             key: value
             for key, value in data.items()
-            if value is not None and value != '' and value != []
+            if value is not None and value != "" and value != []
         }
         attributes.pop("title", None)
         attributes.pop("status", None)

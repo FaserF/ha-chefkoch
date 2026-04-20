@@ -7,21 +7,81 @@ from .const import DOMAIN, DEFAULT_SENSORS, DEFAULT_UPDATE_INTERVAL
 
 # Define the available filter options for the user
 PROPERTIES_OPTIONS = ["Einfach", "Schnell", "Basisrezepte", "Preiswert"]
-HEALTH_OPTIONS = ["Vegetarisch", "Vegan", "Kalorienarm", "Low Carb", "Ketogen", "Paleo", "Fettarm", "Trennkost", "Vollwert"]
+HEALTH_OPTIONS = [
+    "Vegetarisch",
+    "Vegan",
+    "Kalorienarm",
+    "Low Carb",
+    "Ketogen",
+    "Paleo",
+    "Fettarm",
+    "Trennkost",
+    "Vollwert",
+]
 CATEGORIES_OPTIONS = [
-    "Auflauf", "Pizza", "Reis- oder Nudelsalat", "Salat", "Salatdressing", "Tarte", "Fingerfood", "Dips", "Saucen",
-    "Suppe", "Klöße", "Brot und Brötchen", "Brotspeise", "Aufstrich", "Süßspeise", "Eis", "Kuchen", "Kekse",
-    "Torte", "Confiserie", "Getränke", "Shake", "Gewürzmischung", "Pasten", "Studentenküche"
+    "Auflauf",
+    "Pizza",
+    "Reis- oder Nudelsalat",
+    "Salat",
+    "Salatdressing",
+    "Tarte",
+    "Fingerfood",
+    "Dips",
+    "Saucen",
+    "Suppe",
+    "Klöße",
+    "Brot und Brötchen",
+    "Brotspeise",
+    "Aufstrich",
+    "Süßspeise",
+    "Eis",
+    "Kuchen",
+    "Kekse",
+    "Torte",
+    "Confiserie",
+    "Getränke",
+    "Shake",
+    "Gewürzmischung",
+    "Pasten",
+    "Studentenküche",
 ]
 COUNTRIES_OPTIONS = [
-    "Deutschland", "Italien", "Spanien", "Portugal", "Frankreich", "England", "Osteuropa", "Skandinavien",
-    "Griechenland", "Türkei", "Russland", "Naher Osten", "Asien", "Indien", "Japan", "Amerika", "Mexiko",
-    "Karibik", "Lateinamerika", "Afrika", "Marokko", "Ägypten", "Australien"
+    "Deutschland",
+    "Italien",
+    "Spanien",
+    "Portugal",
+    "Frankreich",
+    "England",
+    "Osteuropa",
+    "Skandinavien",
+    "Griechenland",
+    "Türkei",
+    "Russland",
+    "Naher Osten",
+    "Asien",
+    "Indien",
+    "Japan",
+    "Amerika",
+    "Mexiko",
+    "Karibik",
+    "Lateinamerika",
+    "Afrika",
+    "Marokko",
+    "Ägypten",
+    "Australien",
 ]
-MEAL_TYPE_OPTIONS = ["Hauptspeise", "Vorspeise", "Beilage", "Dessert", "Snack", "Frühstück"]
+MEAL_TYPE_OPTIONS = [
+    "Hauptspeise",
+    "Vorspeise",
+    "Beilage",
+    "Dessert",
+    "Snack",
+    "Frühstück",
+]
 PREP_TIMES_OPTIONS = ["Alle", "15", "30", "60", "120"]
 RATINGS_OPTIONS = ["Alle", "2", "3", "4", "Top"]
 SORT_OPTIONS = ["Empfehlung", "Bewertung", "Neuheiten"]
+
 
 def get_search_schema(sensor_data=None):
     """Return the schema for the search sensor form."""
@@ -31,23 +91,45 @@ def get_search_schema(sensor_data=None):
     def str_to_list(value):
         if not value or not isinstance(value, str):
             return []
-        return [item.strip() for item in value.split(',') if item.strip()]
+        return [item.strip() for item in value.split(",") if item.strip()]
 
-    return vol.Schema({
-        vol.Required("name", default=sensor_data.get("name")): str,
-        vol.Optional("search_query", default=sensor_data.get("search_query", "")): str,
-        vol.Optional("properties", default=str_to_list(sensor_data.get("properties"))): cv.multi_select(PROPERTIES_OPTIONS),
-        vol.Optional("health", default=str_to_list(sensor_data.get("health"))): cv.multi_select(HEALTH_OPTIONS),
-        vol.Optional("categories", default=str_to_list(sensor_data.get("categories"))): cv.multi_select(CATEGORIES_OPTIONS),
-        vol.Optional("countries", default=str_to_list(sensor_data.get("countries"))): cv.multi_select(COUNTRIES_OPTIONS),
-        vol.Optional("meal_type", default=str_to_list(sensor_data.get("meal_type"))): cv.multi_select(MEAL_TYPE_OPTIONS),
-        vol.Optional("prep_times", default=sensor_data.get("prep_times", "Alle")): vol.In(PREP_TIMES_OPTIONS),
-        vol.Optional("ratings", default=sensor_data.get("ratings", "Alle")): vol.In(RATINGS_OPTIONS),
-        vol.Optional("sort", default=sensor_data.get("sort", "Empfehlung")): vol.In(SORT_OPTIONS),
-    })
+    return vol.Schema(
+        {
+            vol.Required("name", default=sensor_data.get("name")): str,
+            vol.Optional(
+                "search_query", default=sensor_data.get("search_query", "")
+            ): str,
+            vol.Optional(
+                "properties", default=str_to_list(sensor_data.get("properties"))
+            ): cv.multi_select(PROPERTIES_OPTIONS),
+            vol.Optional(
+                "health", default=str_to_list(sensor_data.get("health"))
+            ): cv.multi_select(HEALTH_OPTIONS),
+            vol.Optional(
+                "categories", default=str_to_list(sensor_data.get("categories"))
+            ): cv.multi_select(CATEGORIES_OPTIONS),
+            vol.Optional(
+                "countries", default=str_to_list(sensor_data.get("countries"))
+            ): cv.multi_select(COUNTRIES_OPTIONS),
+            vol.Optional(
+                "meal_type", default=str_to_list(sensor_data.get("meal_type"))
+            ): cv.multi_select(MEAL_TYPE_OPTIONS),
+            vol.Optional(
+                "prep_times", default=sensor_data.get("prep_times", "Alle")
+            ): vol.In(PREP_TIMES_OPTIONS),
+            vol.Optional("ratings", default=sensor_data.get("ratings", "Alle")): vol.In(
+                RATINGS_OPTIONS
+            ),
+            vol.Optional("sort", default=sensor_data.get("sort", "Empfehlung")): vol.In(
+                SORT_OPTIONS
+            ),
+        }
+    )
 
-class ChefkochConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+
+class ChefkochConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore
     VERSION = 1
+
     async def async_step_user(self, user_input=None):
         if self._async_current_entries():
             return self.async_abort(reason="single_instance_allowed")
@@ -57,7 +139,9 @@ class ChefkochConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 data={},
                 options={
                     "sensors": DEFAULT_SENSORS,
-                    "update_interval": user_input.get("update_interval", DEFAULT_UPDATE_INTERVAL),
+                    "update_interval": user_input.get(
+                        "update_interval", DEFAULT_UPDATE_INTERVAL
+                    ),
                 },
             )
 
@@ -75,6 +159,7 @@ class ChefkochConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     @callback
     def async_get_options_flow(config_entry):
         return ChefkochOptionsFlowHandler(config_entry)
+
 
 class ChefkochOptionsFlowHandler(config_entries.OptionsFlow):
     def __init__(self, config_entry: config_entries.ConfigEntry):
@@ -128,7 +213,9 @@ class ChefkochOptionsFlowHandler(config_entries.OptionsFlow):
                 {
                     vol.Required(
                         "update_interval",
-                        default=self.config_entry.options.get("update_interval", DEFAULT_UPDATE_INTERVAL),
+                        default=self.config_entry.options.get(
+                            "update_interval", DEFAULT_UPDATE_INTERVAL
+                        ),
                     ): vol.All(vol.Coerce(int), vol.Range(min=1)),
                 }
             ),
@@ -141,19 +228,30 @@ class ChefkochOptionsFlowHandler(config_entries.OptionsFlow):
             updated_sensors = self.current_sensors + [new_sensor]
             self.data["sensors"] = updated_sensors
             return self.async_create_entry(title="", data=self.data)
-        return self.async_show_form(step_id="add_sensor", data_schema=get_search_schema(), last_step=True)
+        return self.async_show_form(
+            step_id="add_sensor", data_schema=get_search_schema(), last_step=True
+        )
 
     async def async_step_edit_sensor(self, user_input=None):
-        custom_sensors = {s["id"]: s["name"] for s in self.current_sensors if s.get("type") == "search"}
+        custom_sensors = {
+            s["id"]: s["name"]
+            for s in self.current_sensors
+            if s.get("type") == "search"
+        }
         if not custom_sensors:
             return self.async_abort(reason="no_custom_sensors")
         if user_input is not None:
             self.sensor_to_edit_id = user_input["sensor_id"]
             return await self.async_step_edit_sensor_form()
-        return self.async_show_form(step_id="edit_sensor", data_schema=vol.Schema({vol.Required("sensor_id"): vol.In(custom_sensors)}))
+        return self.async_show_form(
+            step_id="edit_sensor",
+            data_schema=vol.Schema({vol.Required("sensor_id"): vol.In(custom_sensors)}),
+        )
 
     async def async_step_edit_sensor_form(self, user_input=None):
-        sensor_to_edit = next((s for s in self.current_sensors if s["id"] == self.sensor_to_edit_id), None)
+        sensor_to_edit = next(
+            (s for s in self.current_sensors if s["id"] == self.sensor_to_edit_id), None
+        )
         if not sensor_to_edit:
             return self.async_abort(reason="no_sensors")
 
@@ -180,20 +278,28 @@ class ChefkochOptionsFlowHandler(config_entries.OptionsFlow):
         return self.async_show_form(
             step_id="edit_sensor_form",
             data_schema=get_search_schema(form_data),
-            last_step=True
+            last_step=True,
         )
 
     async def async_step_remove_sensor(self, user_input=None):
-        custom_sensors = {s["id"]: s["name"] for s in self.current_sensors if s.get("type") == "search"}
+        custom_sensors = {
+            s["id"]: s["name"]
+            for s in self.current_sensors
+            if s.get("type") == "search"
+        }
         if not custom_sensors:
             return self.async_abort(reason="no_custom_sensors")
         if user_input is not None:
             sensors_to_remove = user_input["sensors_to_remove"]
-            updated_sensors = [s for s in self.current_sensors if s["id"] not in sensors_to_remove]
+            updated_sensors = [
+                s for s in self.current_sensors if s["id"] not in sensors_to_remove
+            ]
             self.data["sensors"] = updated_sensors
             return self.async_create_entry(title="", data=self.data)
         return self.async_show_form(
             step_id="remove_sensor",
-            data_schema=vol.Schema({vol.Required("sensors_to_remove"): cv.multi_select(custom_sensors)}),
-            last_step=True
+            data_schema=vol.Schema(
+                {vol.Required("sensors_to_remove"): cv.multi_select(custom_sensors)}
+            ),
+            last_step=True,
         )
