@@ -162,11 +162,11 @@ class ChefkochConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ign
 
 
 class ChefkochOptionsFlowHandler(config_entries.OptionsFlow):
-    def __init__(self, config_entry: config_entries.ConfigEntry):
-        self.config_entry = config_entry
-        self.current_sensors = self.config_entry.options.get("sensors", [])
+    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
+        super().__init__(config_entry)
+        self.current_sensors = config_entry.options.get("sensors", [])
         self.sensor_to_edit_id = None
-        self.data = dict(self.config_entry.options)
+        self.data = dict(config_entry.options)
 
     def _process_user_input(self, user_input):
         """Process user input to convert lists to strings and handle special values for storage."""
