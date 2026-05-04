@@ -1,6 +1,7 @@
 """Sensor platform for Chefkoch."""
 
 from homeassistant.components.sensor import SensorEntity
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import (
     CoordinatorEntity,
     DataUpdateCoordinator,
@@ -41,6 +42,16 @@ class ChefkochSensor(CoordinatorEntity, SensorEntity):
 
         self._attr_icon = "mdi:chef-hat"
         self._attr_unique_id = f"chefkoch_{sensor_config['id']}"
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return device information."""
+        return DeviceInfo(
+            identifiers={(DOMAIN, "chefkoch_integration")},
+            name="Recipes",
+            manufacturer="Chefkoch",
+            configuration_url="https://www.chefkoch.de/",
+        )
 
     @property
     def sensor_id(self):
