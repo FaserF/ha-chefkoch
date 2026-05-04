@@ -6,6 +6,7 @@ DEFAULT_SENSORS = [
     {"type": "random", "id": "random", "name": "Chefkoch Random Recipe"},
     {"type": "daily", "id": "daily", "name": "Chefkoch Daily Recipe"},
     {"type": "vegan", "id": "vegan", "name": "Chefkoch Vegan Recipe"},
+    {"type": "vegetarian", "id": "vegetarian", "name": "Chefkoch Vegetarian Recipe"},
     {"type": "baking", "id": "baking", "name": "Chefkoch Random Baking Recipe"},
 ]
 

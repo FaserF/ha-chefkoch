@@ -89,6 +89,13 @@ async def _fetch_recipe_url(sensor_config: dict[str, Any]) -> str | None:
             recipes = await asyncio.to_thread(retriever.get_recipes, type="backen")
             return recipes[0].url if recipes and recipes[0] else None
 
+        elif sensor_type == "vegetarian":
+            retriever = SearchRetriever(health=["Vegetarisch"])
+            recipes = await asyncio.to_thread(
+                retriever.get_recipes, search_query="vegetarisch"
+            )
+            return recipes[0].url if recipes and recipes[0] else None
+
         elif sensor_type == "search":
             search_query = sensor_config.get("search_query", "")
 
@@ -173,6 +180,10 @@ def extract_recipe_attributes(recipe_url: str) -> dict[str, Any]:
         "instructions": safe_get_attr(recipe, "instructions", ""),
         "category": safe_get_attr(recipe, "category", ""),
         "servings": safe_get_attr(recipe, "servings", ""),
+        "author": safe_get_attr(recipe, "author", ""),
+        "publisher": safe_get_attr(recipe, "publisher", ""),
+        "keywords": safe_get_attr(recipe, "keywords", ""),
+        "date_published": str(safe_get_attr(recipe, "date_published", "")),
         "status": "success",
     }
 
@@ -194,6 +205,10 @@ def extract_recipe_attributes(recipe_url: str) -> dict[str, Any]:
     else:
         attributes["rating"] = rating_info
         attributes["rating_count"] = None
+
+    # Additional rating statistics
+    attributes["number_ratings"] = safe_get_attr(recipe, "number_ratings", None)
+    attributes["number_reviews"] = safe_get_attr(recipe, "number_reviews", None)
 
     _LOGGER.debug("Extracted attributes for recipe %s.", recipe.url)
     return attributes

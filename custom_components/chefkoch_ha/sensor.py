@@ -47,7 +47,7 @@ class ChefkochSensor(CoordinatorEntity, SensorEntity):
     def device_info(self) -> DeviceInfo:
         """Return device information."""
         return DeviceInfo(
-            identifiers={(DOMAIN, "chefkoch_integration")},
+            identifiers={(DOMAIN, "chefkoch_ha")},
             name="Recipes",
             manufacturer="Chefkoch",
             configuration_url="https://www.chefkoch.de/",
