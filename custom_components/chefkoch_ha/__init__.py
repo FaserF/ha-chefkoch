@@ -2,13 +2,12 @@ import asyncio
 import json
 import logging
 import random
-import re
 from datetime import timedelta
 from typing import Any
 
 import requests
 from bs4 import BeautifulSoup
-from get_chefkoch import Search
+from get_chefkoch import Search  # type: ignore[import-untyped]
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_NAME
@@ -30,8 +29,8 @@ async def async_update_data(hass: HomeAssistant, entry: ConfigEntry) -> dict[str
 
     # Get current data to prevent flickering during partial updates
     # We check both the active coordinator and the persistent cache
-    current_data = {}
-    
+    current_data: dict[str, Any] = {}
+
     # 1. Try active coordinator
     if (
         DOMAIN in hass.data
@@ -39,7 +38,7 @@ async def async_update_data(hass: HomeAssistant, entry: ConfigEntry) -> dict[str
         and "coordinator" in hass.data[DOMAIN][entry.entry_id]
     ):
         current_data = hass.data[DOMAIN][entry.entry_id]["coordinator"].data or {}
-    
+
     # 2. Try persistent cache (survives reloads)
     if not current_data:
         current_data = hass.data.get(DOMAIN, {}).get(f"cache_{entry.entry_id}", {})
@@ -108,14 +107,14 @@ async def _fetch_recipe_url(sensor_config: dict[str, Any]) -> str | None:
             recipe_id = getattr(recipe, "_id", None)
             if not recipe_id:
                 recipe_id = _get_id_from_url(getattr(recipe, "_url", ""))
-            
+
             if recipe_id:
                 url = f"{CHEFKOCH_BASE_URL}{recipe_id}/"
                 # Check for Plus recipe (no JSON-LD)
                 try:
                     headers = {"User-Agent": "Mozilla/5.0"}
                     resp = requests.get(url, headers=headers, timeout=5)
-                    if resp.status_code == 200 and 'application/ld+json' in resp.text:
+                    if resp.status_code == 200 and "application/ld+json" in resp.text:
                         # Avoid triggering getMeta via .name property
                         recipe_name = "Daily Recipe"
                         if hasattr(recipe, "_gotMeta") and recipe._gotMeta:
@@ -134,19 +133,22 @@ async def _fetch_recipe_url(sensor_config: dict[str, Any]) -> str | None:
             # Try up to 5 random choices to find a non-Plus recipe
             attempts = min(5, len(recipes))
             sampled_recipes = random.sample(recipes, attempts)
-            
+
             for choice in sampled_recipes:
                 recipe_id = getattr(choice, "_id", None)
                 if not recipe_id:
                     recipe_id = _get_id_from_url(getattr(choice, "_url", ""))
-                
+
                 if recipe_id:
                     url = f"{CHEFKOCH_BASE_URL}{recipe_id}/"
                     # Pre-check: Does it have JSON-LD? (Plus recipes usually don't)
                     try:
                         headers = {"User-Agent": "Mozilla/5.0"}
                         resp = requests.get(url, headers=headers, timeout=5)
-                        if resp.status_code == 200 and 'application/ld+json' in resp.text:
+                        if (
+                            resp.status_code == 200
+                            and "application/ld+json" in resp.text
+                        ):
                             # Avoid triggering getMeta via .name property
                             recipe_name = "Search Recipe"
                             if hasattr(choice, "_gotMeta") and choice._gotMeta:
@@ -156,12 +158,12 @@ async def _fetch_recipe_url(sensor_config: dict[str, Any]) -> str | None:
                             _LOGGER.debug("Skipping Plus or invalid recipe: %s", url)
                     except Exception as e:
                         _LOGGER.debug("Error during Plus check for %s: %s", url, e)
-            
+
             # Fallback to the first one if all checks fail (to avoid returning None)
             choice = recipes[0]
             recipe_id = _get_id_from_url(getattr(choice, "_url", ""))
             return f"{CHEFKOCH_BASE_URL}{recipe_id}/", "Search Recipe"
-            
+
         return None, None
 
     try:
@@ -173,11 +175,13 @@ async def _fetch_recipe_url(sensor_config: dict[str, Any]) -> str | None:
             try:
                 url, name = await asyncio.to_thread(_get_daily_url)
             except Exception as daily_err:
-                _LOGGER.warning("Daily recipe fetch failed: %s. Falling back to random.", daily_err)
-            
+                _LOGGER.warning(
+                    "Daily recipe fetch failed: %s. Falling back to random.", daily_err
+                )
+
             if not url:
                 url, name = await asyncio.to_thread(_get_search_url, "Rezept")
-            
+
             if url:
                 _LOGGER.debug("Daily/Fallback recipe: %s (URL: %s)", name, url)
             return url
@@ -225,7 +229,8 @@ def _parse_duration(duration_str):
         return ""
     try:
         import re
-        match = re.match(r'PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?', duration_str)
+
+        match = re.match(r"PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?", duration_str)
         if not match:
             return ""
         hours, minutes, seconds = match.groups()
@@ -233,23 +238,28 @@ def _parse_duration(duration_str):
         m = int(minutes) if minutes else 0
         s = int(seconds) if seconds else 0
         return str(timedelta(hours=h, minutes=m, seconds=s))
-    except:
+    except Exception:
         return ""
+
 
 def extract_recipe_attributes(recipe_url: str) -> dict[str, Any]:
     """Extract all attributes from a recipe URL using manual parsing as fallback for get_chefkoch."""
     try:
         # Manual fetch to be more robust
-        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"}
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
         response = requests.get(recipe_url, headers=headers, timeout=10)
         response.raise_for_status()
         soup = BeautifulSoup(response.text, "html.parser")
-        
+
         # Find JSON-LD
         scripts = soup.find_all("script", type="application/ld+json")
         raw = {}
         for script in scripts:
             try:
+                if not script.string:
+                    continue
                 data = json.loads(script.string)
                 # Some scripts are lists, some are objects
                 if isinstance(data, list):
@@ -260,9 +270,9 @@ def extract_recipe_attributes(recipe_url: str) -> dict[str, Any]:
                 elif data.get("@type") == "Recipe":
                     raw = data
                     break
-            except:
+            except Exception:
                 continue
-        
+
         if not raw:
             _LOGGER.error("No Recipe JSON-LD found in %s", recipe_url)
             return {
@@ -292,7 +302,9 @@ def extract_recipe_attributes(recipe_url: str) -> dict[str, Any]:
         if isinstance(author_raw, dict):
             author = author_raw.get("name", "")
         elif isinstance(author_raw, list) and author_raw:
-            author = author_raw[0].get("name", "") if isinstance(author_raw[0], dict) else ""
+            author = (
+                author_raw[0].get("name", "") if isinstance(author_raw[0], dict) else ""
+            )
 
         # Nutrition
         nutrition = safe("nutrition", {})
@@ -358,14 +370,22 @@ def extract_recipe_attributes(recipe_url: str) -> dict[str, Any]:
             "fat": fat,
             "carbohydrates": carbohydrates,
             "cuisine": safe("recipeCuisine", ""),
-            "video_url": safe("video", [{}])[0].get("contentUrl", "") if isinstance(safe("video"), list) and safe("video") else (safe("video", {}).get("contentUrl", "") if isinstance(safe("video"), dict) else ""),
+            "video_url": safe("video", [{}])[0].get("contentUrl", "")
+            if isinstance(safe("video"), list) and safe("video")
+            else (
+                safe("video", {}).get("contentUrl", "")
+                if isinstance(safe("video"), dict)
+                else ""
+            ),
             "difficulty": safe("difficulty", ""),
             "ingredients": ingredients,
             "instructions": instructions,
             "category": safe("recipeCategory", ""),
             "servings": safe("recipeYield", ""),
             "author": author,
-            "publisher": safe("publisher", {}).get("name", "") if isinstance(safe("publisher"), dict) else "",
+            "publisher": safe("publisher", {}).get("name", "")
+            if isinstance(safe("publisher"), dict)
+            else "",
             "keywords": safe("keywords", ""),
             "date_published": str(safe("datePublished", "")),
             "status": "success",

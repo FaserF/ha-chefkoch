@@ -1,10 +1,13 @@
+import logging
 import voluptuous as vol
 import uuid
 from homeassistant import config_entries
 from homeassistant.core import callback
 import homeassistant.helpers.config_validation as cv
-from get_chefkoch import Search
+from get_chefkoch import Search  # type: ignore[import-untyped]
 from .const import DOMAIN, DEFAULT_SENSORS, DEFAULT_UPDATE_INTERVAL
+
+_LOGGER = logging.getLogger(__name__)
 
 # Define the available filter options for the user
 PROPERTIES_OPTIONS = ["Einfach", "Schnell", "Basisrezepte", "Preiswert"]
@@ -169,32 +172,11 @@ class ChefkochOptionsFlowHandler(config_entries.OptionsFlow):
         self.sensor_to_edit_id = None
         self.data = dict(config_entry.options)
         self.search_query = ""
-        self.suggestions = []
+        self.suggestions: list[str] = []
 
     def _process_user_input(self, user_input):
-        """Process user input to convert lists to strings and handle special values for storage."""
+        """Process user input to handle special values for storage."""
         processed_input = user_input.copy()
-
-        # Convert lists from multi-select back to comma-separated strings
-        for key in ["properties", "health", "categories", "countries", "meal_type"]:
-            if key in processed_input and isinstance(processed_input[key], list):
-                processed_input[key] = ",".join(processed_input[key])
-
-        # Handle 'Alle' for prep_times
-        selected_prep_time = processed_input.get("prep_times")
-        if selected_prep_time == "Alle":
-            processed_input["prep_times"] = ""
-        else:
-            processed_input["prep_times"] = int(selected_prep_time)
-
-        # Handle 'Alle' and 'Top' for ratings
-        ratings_map = {"2": "2", "3": "3", "4": "4", "Top": "5"}
-        selected_rating = processed_input.get("ratings")
-        if selected_rating in ratings_map:
-            processed_input["ratings"] = ratings_map[selected_rating]
-        else:  # "Alle"
-            processed_input["ratings"] = ""
-
         return processed_input
 
     async def async_step_init(self, user_input=None):

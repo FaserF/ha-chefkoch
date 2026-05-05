@@ -48,30 +48,14 @@
         "title": "Add New Search Sensor",
         "data": {
           "name": "Sensor Name (e.g., 'Cakes')",
-          "search_query": "Search Term (e.g., 'Cheesecake')",
-          "properties": "Properties (e.g. Simple, Quick)",
-          "health": "Diet (e.g. Vegan, Low Carb)",
-          "categories": "Categories (e.g. Pizza)",
-          "countries": "Countries (e.g. Italy)",
-          "meal_type": "Meal Type (e.g. Main Dish)",
-          "prep_times": "Max. Preparation Time (Minutes)",
-          "ratings": "Minimum Rating (Stars)",
-          "sort": "Sort by"
+          "search_query": "Search Term (e.g., 'Cheesecake')"
         }
       },
       "edit_sensor_form": {
         "title": "Edit Sensor",
         "data": {
           "name": "Sensor Name",
-          "search_query": "Search Term",
-          "properties": "Properties",
-          "health": "Diet",
-          "categories": "Categories",
-          "countries": "Countries",
-          "meal_type": "Meal Type",
-          "prep_times": "Max. Preparation Time (Minutes)",
-          "ratings": "Minimum Rating (Stars)",
-          "sort": "Sort by"
+          "search_query": "Search Term"
         }
       },
       "edit_sensor": {

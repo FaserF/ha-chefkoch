@@ -1,4 +1,5 @@
 import sys
+import types
 from unittest.mock import AsyncMock, MagicMock
 
 
@@ -44,30 +45,43 @@ def setup_mocks():
             self.coordinator = coordinator
 
     class MockDataEntryFlow:
+        def __init_subclass__(cls, **kwargs):
+            super().__init_subclass__()
+
         def __init__(self, *args, **kwargs):
             self.hass = MagicMock()
             self.context = {}
-            self.async_show_form = AsyncMock(return_value="form")
-            self.async_create_entry = AsyncMock(return_value="create")
-            self.async_abort = AsyncMock(return_value="abort")
-            self.async_show_menu = AsyncMock(return_value="menu")
+            self.async_show_form = MagicMock(side_effect=lambda step_id=None, data_schema=None, errors=None, description_placeholders=None, last_step=None: {"type": "form", "step_id": step_id, "data_schema": data_schema, "errors": errors, "last_step": last_step})
+            self.async_create_entry = MagicMock(side_effect=lambda title="", data={}, options=None: {"type": "create_entry", "title": title, "data": data, "options": options})
+            self.async_abort = MagicMock(side_effect=lambda reason="": {"type": "abort", "reason": reason})
+            self.async_show_menu = MagicMock(side_effect=lambda step_id=None, menu_options=None: {"type": "menu", "step_id": step_id, "menu_options": menu_options})
 
         def _async_current_entries(self, *args, **kwargs):
             return []
 
-    # Mock modules
-    m = MagicMock()
-    sys.modules["homeassistant"] = m
-    sys.modules["homeassistant.const"] = MagicMock()
-    sys.modules["homeassistant.const"].CONF_NAME = "name"
-    sys.modules["homeassistant.core"] = MagicMock()
-    sys.modules["homeassistant.callback"] = lambda x: x
+    # Create homeassistant module structure
+    ha = types.ModuleType("homeassistant")
+    sys.modules["homeassistant"] = ha
 
-    conf_entries = MagicMock()
-    conf_entries.ConfigFlow = MockDataEntryFlow
-    conf_entries.OptionsFlow = MockDataEntryFlow
-    sys.modules["homeassistant.config_entries"] = conf_entries
+    ha_const = types.ModuleType("homeassistant.const")
+    ha_const.CONF_NAME = "name"
+    sys.modules["homeassistant.const"] = ha_const
+    ha.const = ha_const
 
+    ha_core = types.ModuleType("homeassistant.core")
+    ha_core.HomeAssistant = MagicMock
+    ha_core.callback = lambda x: x
+    sys.modules["homeassistant.core"] = ha_core
+    ha.core = ha_core
+
+    ha_config_entries = types.ModuleType("homeassistant.config_entries")
+    ha_config_entries.ConfigFlow = MockDataEntryFlow
+    ha_config_entries.OptionsFlow = MockDataEntryFlow
+    ha_config_entries.ConfigEntry = MagicMock
+    sys.modules["homeassistant.config_entries"] = ha_config_entries
+    ha.config_entries = ha_config_entries
+
+    # Mock other helpers
     sys.modules["homeassistant.helpers"] = MagicMock()
     sys.modules["homeassistant.helpers.update_coordinator"] = MagicMock()
     sys.modules[
@@ -94,37 +108,24 @@ def setup_mocks():
             return self
 
     vol.Schema = MockSchema
-    vol.Optional = lambda x, default=None: x  # type: ignore[assignment]
-    vol.Required = lambda x, default=None: x  # type: ignore[assignment]
-    vol.All = lambda *args: lambda x: x  # type: ignore[assignment]
-    vol.Coerce = lambda x: lambda y: y  # type: ignore[assignment]
-    vol.Range = lambda min=None, max=None: lambda x: x  # type: ignore[assignment]
-    vol.In = lambda x: lambda y: y  # type: ignore[assignment]
+    vol.Optional = lambda x, default=None: x  # type: ignore[misc]
+    vol.Required = lambda x, default=None: x  # type: ignore[misc]
+    vol.All = lambda *args: lambda x: x  # type: ignore[misc]
+    vol.Coerce = lambda x: lambda y: y  # type: ignore[misc]
+    vol.Range = lambda min=None, max=None: lambda x: x  # type: ignore[misc]
+    vol.In = lambda x: lambda y: y  # type: ignore[misc]
     sys.modules["voluptuous"] = vol
 
     # Mock get_chefkoch
     mock_recipe = MagicMock()
-    mock_recipe.id = "test_id"
+    mock_recipe._id = "test_id"
     mock_recipe.name = "Test Recipe"
-    mock_recipe.image = "http://image"
-    mock_recipe.category = "Test"
-    mock_recipe.ingredients = ["Salt"]
-    mock_recipe.prepTime = "0:10:00"
-    mock_recipe.totalTime = "0:30:00"
-    mock_recipe.cookTime = "0:20:00"
-    mock_recipe.data_dump.return_value = {
-        "aggregateRating": {"ratingValue": 4.5, "ratingCount": 10, "reviewCount": 5},
-        "author": {"name": "Test Author"},
-        "nutrition": {"calories": "500 kcal"},
-        "keywords": "Test",
-        "datePublished": "2024-01-01",
-        "recipeYield": "4 Portionen",
-        "publisher": {"name": "Chefkoch"},
-    }
+    mock_recipe._url = "http://recipe/123/"
 
     mock_search = MagicMock()
     mock_search.recipes.return_value = [mock_recipe]
     mock_search.recipeOfTheDay.return_value = mock_recipe
+    mock_search.suggestions.return_value = {"suggestions": ["Test"]}
 
     get_chefkoch_mock = MagicMock()
     get_chefkoch_mock.Recipe = MagicMock(return_value=mock_recipe)
