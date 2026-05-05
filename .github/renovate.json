@@ -1,16 +1,13 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:base"
+    "config:recommended"
   ],
-  "regexManagers": [
+  "customManagers": [
     {
-      "fileMatch": [
-        "/manifest.json$"
-      ],
-      "matchStrings": [
-        "python-chefkoch==?(?<currentValue>.+?)[\"']?\\s+"
-      ],
+      "customType": "regex",
+      "managerFilePatterns": ["//manifest.json$/"],
+      "matchStrings": ["python-chefkoch==?(?<currentValue>.+?)[\"']?\\s+"],
       "datasourceTemplate": "pypi",
       "depNameTemplate": "python_chefkoch"
     }
