@@ -28,7 +28,17 @@ async def async_update_data(hass: HomeAssistant, entry: ConfigEntry) -> dict[str
     if not sensors:
         return {}
 
-    data: dict[str, Any] = {}
+    # Get current data to prevent flickering during partial updates
+    # We use a copy to avoid mutating the current state prematurely
+    current_data = {}
+    if (
+        DOMAIN in hass.data
+        and entry.entry_id in hass.data[DOMAIN]
+        and "coordinator" in hass.data[DOMAIN][entry.entry_id]
+    ):
+        current_data = hass.data[DOMAIN][entry.entry_id]["coordinator"].data or {}
+
+    data: dict[str, Any] = dict(current_data)
 
     async def fetch_and_process_sensor(sensor_config: dict[str, Any]) -> None:
         sensor_id = sensor_config["id"]
@@ -43,11 +53,13 @@ async def async_update_data(hass: HomeAssistant, entry: ConfigEntry) -> dict[str
                 data[sensor_id] = attributes
             else:
                 _LOGGER.warning("No recipe found for sensor %s", sensor_name)
-                data[sensor_id] = {
-                    "title": "No recipe found",
-                    "status": "warning",
-                    "error_message": "No matching recipe found.",
-                }
+                # Only set error state if we don't have old data
+                if sensor_id not in data:
+                    data[sensor_id] = {
+                        "title": "No recipe found",
+                        "status": "warning",
+                        "error_message": "No matching recipe found.",
+                    }
         except Exception as e:
             _LOGGER.error(
                 "Error during data fetching for sensor %s: %s",
@@ -55,11 +67,13 @@ async def async_update_data(hass: HomeAssistant, entry: ConfigEntry) -> dict[str
                 e,
                 exc_info=True,
             )
-            data[sensor_id] = {
-                "title": "Error fetching data",
-                "status": "error",
-                "error_message": str(e),
-            }
+            # Only set error state if we don't have old data
+            if sensor_id not in data:
+                data[sensor_id] = {
+                    "title": "Error fetching data",
+                    "status": "error",
+                    "error_message": str(e),
+                }
 
     tasks = [fetch_and_process_sensor(s) for s in sensors]
     await asyncio.gather(*tasks)
@@ -90,7 +104,11 @@ async def _fetch_recipe_url(sensor_config: dict[str, Any]) -> str | None:
                 recipe_id = _get_id_from_url(getattr(recipe, "_url", ""))
             
             if recipe_id:
-                return f"{CHEFKOCH_BASE_URL}{recipe_id}/", getattr(recipe, "name", "Daily Recipe")
+                # Avoid triggering getMeta via .name property
+                recipe_name = "Daily Recipe"
+                if hasattr(recipe, "_gotMeta") and recipe._gotMeta:
+                    recipe_name = getattr(recipe, "name", recipe_name)
+                return f"{CHEFKOCH_BASE_URL}{recipe_id}/", recipe_name
         return None, None
 
     def _get_search_url(query, limit=20):
@@ -103,7 +121,11 @@ async def _fetch_recipe_url(sensor_config: dict[str, Any]) -> str | None:
                 recipe_id = _get_id_from_url(getattr(choice, "_url", ""))
             
             if recipe_id:
-                return f"{CHEFKOCH_BASE_URL}{recipe_id}/", getattr(choice, "name", "Search Recipe")
+                # Avoid triggering getMeta via .name property
+                recipe_name = "Search Recipe"
+                if hasattr(choice, "_gotMeta") and choice._gotMeta:
+                    recipe_name = getattr(choice, "name", recipe_name)
+                return f"{CHEFKOCH_BASE_URL}{recipe_id}/", recipe_name
         return None, None
 
     try:
@@ -261,6 +283,36 @@ def extract_recipe_attributes(recipe_url: str) -> dict[str, Any]:
         elif isinstance(images, str):
             image_url = images
 
+        # Instructions: can be a string, a list of strings, a list of HowToStep objects, or HowToSection objects
+        instructions_raw = safe("recipeInstructions", "")
+        instructions_list = []
+
+        def process_instructions(items):
+            if isinstance(items, list):
+                for item in items:
+                    process_instructions(item)
+            elif isinstance(items, dict):
+                if items.get("@type") == "HowToStep":
+                    text = items.get("text", "")
+                    if text:
+                        instructions_list.append(str(text))
+                elif items.get("@type") == "HowToSection":
+                    # Handle section name if present
+                    name = items.get("name")
+                    if name:
+                        instructions_list.append(str(name))
+                    process_instructions(items.get("itemListElement", []))
+                else:
+                    # Fallback for other dict structures
+                    text = items.get("text") or items.get("name")
+                    if text:
+                        instructions_list.append(str(text))
+            elif items:
+                instructions_list.append(str(items))
+
+        process_instructions(instructions_raw)
+        instructions = "\n".join(instructions_list)
+
         attributes: dict[str, Any] = {
             "title": name,
             "url": recipe_url,
@@ -273,7 +325,7 @@ def extract_recipe_attributes(recipe_url: str) -> dict[str, Any]:
             "video_url": safe("video", [{}])[0].get("contentUrl", "") if isinstance(safe("video"), list) and safe("video") else (safe("video", {}).get("contentUrl", "") if isinstance(safe("video"), dict) else ""),
             "difficulty": safe("difficulty", ""),
             "ingredients": ingredients,
-            "instructions": safe("recipeInstructions", ""),
+            "instructions": instructions,
             "category": safe("recipeCategory", ""),
             "servings": safe("recipeYield", ""),
             "author": author,
