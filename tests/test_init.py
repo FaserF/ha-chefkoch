@@ -7,9 +7,10 @@ from custom_components.chefkoch_ha import (
     options_update_listener,
     async_update_data,
     extract_recipe_attributes,
-    _fetch_recipe_url
+    _fetch_recipe_url,
 )
 from custom_components.chefkoch_ha.const import DOMAIN
+
 
 @pytest.fixture
 def mock_hass():
@@ -22,41 +23,51 @@ def mock_hass():
     hass.async_add_executor_job = AsyncMock()
     return hass
 
+
 @pytest.fixture
 def mock_config_entry():
     entry = MagicMock()
     entry.entry_id = "test_entry_id"
     entry.options = {
         "sensors": [{"id": "test_sensor", "type": "search", "name": "Test"}],
-        "update_interval": 12
+        "update_interval": 12,
     }
     entry.add_update_listener = MagicMock()
     return entry
 
+
 @pytest.mark.asyncio
 async def test_setup_and_unload_entry(mock_hass, mock_config_entry):
     """Test setting up and unloading the integration."""
-    with patch("custom_components.chefkoch_ha.DataUpdateCoordinator") as mock_coordinator_cls:
+    with patch(
+        "custom_components.chefkoch_ha.DataUpdateCoordinator"
+    ) as mock_coordinator_cls:
         mock_coordinator = MagicMock()
         mock_coordinator.async_config_entry_first_refresh = AsyncMock()
         mock_coordinator_cls.return_value = mock_coordinator
-        
+
         # Setup
         assert await async_setup_entry(mock_hass, mock_config_entry) is True
         assert DOMAIN in mock_hass.data
         assert "coordinator" in mock_hass.data[DOMAIN]["test_entry_id"]
-        mock_hass.config_entries.async_forward_entry_setups.assert_called_once_with(mock_config_entry, ["sensor"])
-        
+        mock_hass.config_entries.async_forward_entry_setups.assert_called_once_with(
+            mock_config_entry, ["sensor"]
+        )
+
         # Unload
         assert await async_unload_entry(mock_hass, mock_config_entry) is True
         assert "test_entry_id" not in mock_hass.data[DOMAIN]
-        mock_hass.config_entries.async_unload_platforms.assert_called_once_with(mock_config_entry, ["sensor"])
+        mock_hass.config_entries.async_unload_platforms.assert_called_once_with(
+            mock_config_entry, ["sensor"]
+        )
+
 
 @pytest.mark.asyncio
 async def test_options_update_listener(mock_hass, mock_config_entry):
     """Test that options update triggers a reload."""
     await options_update_listener(mock_hass, mock_config_entry)
     mock_hass.config_entries.async_reload.assert_called_once_with("test_entry_id")
+
 
 def test_extract_recipe_attributes():
     """Test extracting attributes from a mock recipe."""
@@ -90,12 +101,14 @@ def test_extract_recipe_attributes():
         assert attributes["author"] == "Chef"
         assert attributes["totalTime"] == "1h"
 
+
 def test_extract_recipe_attributes_error():
     """Test extracting attributes when recipe parsing fails."""
     with patch("custom_components.chefkoch_ha.Recipe", side_effect=Exception("Failed")):
         attributes = extract_recipe_attributes("http://test")
         assert attributes["title"] == "Error loading recipe"
         assert attributes["status"] == "error"
+
 
 @pytest.mark.asyncio
 async def test_fetch_recipe_url_random():
@@ -110,10 +123,13 @@ async def test_fetch_recipe_url_random():
         url = await _fetch_recipe_url({"type": "random"})
         assert url == "http://random"
 
+
 @pytest.mark.asyncio
 async def test_fetch_recipe_url_daily():
     """Test fetching daily recipe URL."""
-    with patch("custom_components.chefkoch_ha.DailyRecipeRetriever") as mock_retriever_cls:
+    with patch(
+        "custom_components.chefkoch_ha.DailyRecipeRetriever"
+    ) as mock_retriever_cls:
         mock_retriever = MagicMock()
         mock_recipe = MagicMock()
         mock_recipe.url = "http://daily"
@@ -122,6 +138,7 @@ async def test_fetch_recipe_url_daily():
 
         url = await _fetch_recipe_url({"type": "daily"})
         assert url == "http://daily"
+
 
 @pytest.mark.asyncio
 async def test_fetch_recipe_url_vegan():
@@ -137,6 +154,7 @@ async def test_fetch_recipe_url_vegan():
         assert url == "http://vegan"
         mock_retriever_cls.assert_called_with(health=["Vegan"])
 
+
 @pytest.mark.asyncio
 async def test_fetch_recipe_url_vegetarian():
     """Test fetching vegetarian recipe URL."""
@@ -151,10 +169,13 @@ async def test_fetch_recipe_url_vegetarian():
         assert url == "http://veg"
         mock_retriever_cls.assert_called_with(health=["Vegetarisch"])
 
+
 @pytest.mark.asyncio
 async def test_fetch_recipe_url_baking():
     """Test fetching baking recipe URL."""
-    with patch("custom_components.chefkoch_ha.DailyRecipeRetriever") as mock_retriever_cls:
+    with patch(
+        "custom_components.chefkoch_ha.DailyRecipeRetriever"
+    ) as mock_retriever_cls:
         mock_retriever = MagicMock()
         mock_recipe = MagicMock()
         mock_recipe.url = "http://baking"
@@ -164,6 +185,7 @@ async def test_fetch_recipe_url_baking():
         url = await _fetch_recipe_url({"type": "baking"})
         assert url == "http://baking"
         mock_retriever.get_recipes.assert_called_with(type="backen")
+
 
 @pytest.mark.asyncio
 async def test_fetch_recipe_url_search():
@@ -178,21 +200,25 @@ async def test_fetch_recipe_url_search():
         config = {
             "type": "search",
             "search_query": "Pasta",
-            "properties": "Einfach, Schnell"
+            "properties": "Einfach, Schnell",
         }
         url = await _fetch_recipe_url(config)
         assert url == "http://search"
         mock_retriever_cls.assert_called_with(properties=["Einfach", "Schnell"])
         mock_retriever.get_recipes.assert_called_with(search_query="Pasta")
 
+
 @pytest.mark.asyncio
 async def test_async_update_data(mock_hass, mock_config_entry):
     """Test updating data for all sensors."""
     mock_hass.async_add_executor_job = AsyncMock(return_value={"title": "Data"})
-    with patch("custom_components.chefkoch_ha._fetch_recipe_url", return_value="http://recipe"):
+    with patch(
+        "custom_components.chefkoch_ha._fetch_recipe_url", return_value="http://recipe"
+    ):
         data = await async_update_data(mock_hass, mock_config_entry)
         assert "test_sensor" in data
         assert data["test_sensor"] == {"title": "Data"}
+
 
 @pytest.mark.asyncio
 async def test_async_update_data_no_url(mock_hass, mock_config_entry):
@@ -202,14 +228,19 @@ async def test_async_update_data_no_url(mock_hass, mock_config_entry):
         assert "test_sensor" in data
         assert data["test_sensor"]["status"] == "warning"
 
+
 @pytest.mark.asyncio
 async def test_async_update_data_error(mock_hass, mock_config_entry):
     """Test updating data when an exception occurs."""
-    with patch("custom_components.chefkoch_ha._fetch_recipe_url", side_effect=Exception("Network error")):
+    with patch(
+        "custom_components.chefkoch_ha._fetch_recipe_url",
+        side_effect=Exception("Network error"),
+    ):
         data = await async_update_data(mock_hass, mock_config_entry)
         assert "test_sensor" in data
         assert data["test_sensor"]["status"] == "error"
         assert "Network error" in data["test_sensor"]["error_message"]
+
 
 @pytest.mark.asyncio
 async def test_async_update_data_no_sensors(mock_hass):

@@ -10,6 +10,7 @@ try:
 except AttributeError:
     print("Cannot access _Recipe__info_dict")
 
+
 # Let's try to monkeypatch it with a simple property
 def patched_info_dict(self):
     if not hasattr(self, "_Recipe__soup"):
@@ -27,6 +28,7 @@ def patched_info_dict(self):
         except:
             continue
     return {}
+
 
 # Apply patch
 Recipe._Recipe__info_dict = property(patched_info_dict)

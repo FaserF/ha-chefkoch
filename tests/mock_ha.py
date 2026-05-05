@@ -1,5 +1,5 @@
 import sys
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 
 def setup_mocks():
@@ -43,22 +43,17 @@ def setup_mocks():
             super().__init__()
             self.coordinator = coordinator
 
-    class MockOptionsFlow:
-        def __init__(self, config_entry=None):
-            self.config_entry = config_entry
+    class MockDataEntryFlow:
+        def __init__(self, *args, **kwargs):
             self.hass = MagicMock()
+            self.context = {}
+            self.async_show_form = AsyncMock(return_value="form")
+            self.async_create_entry = AsyncMock(return_value="create")
+            self.async_abort = AsyncMock(return_value="abort")
+            self.async_show_menu = AsyncMock(return_value="menu")
 
-        async def async_show_menu(self, **kwargs):
-            return "menu"
-
-        async def async_show_form(self, **kwargs):
-            return "form"
-
-        def async_create_entry(self, **kwargs):
-            return "create"
-
-        def async_abort(self, **kwargs):
-            return "abort"
+        def _async_current_entries(self, *args, **kwargs):
+            return []
 
     # Mock modules
     m = MagicMock()
@@ -67,8 +62,12 @@ def setup_mocks():
     sys.modules["homeassistant.const"].CONF_NAME = "name"
     sys.modules["homeassistant.core"] = MagicMock()
     sys.modules["homeassistant.callback"] = lambda x: x
-    sys.modules["homeassistant.config_entries"] = MagicMock()
-    sys.modules["homeassistant.config_entries"].OptionsFlow = MockOptionsFlow
+
+    conf_entries = MagicMock()
+    conf_entries.ConfigFlow = MockDataEntryFlow
+    conf_entries.OptionsFlow = MockDataEntryFlow
+    sys.modules["homeassistant.config_entries"] = conf_entries
+
     sys.modules["homeassistant.helpers"] = MagicMock()
     sys.modules["homeassistant.helpers.update_coordinator"] = MagicMock()
     sys.modules[

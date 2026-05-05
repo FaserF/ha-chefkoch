@@ -1,22 +1,70 @@
 import asyncio
+import json
 import logging
 from datetime import timedelta
+from importlib.metadata import version as pkg_version
 from typing import Any
 
-from homeassistant import config_entries, core
+from chefkoch import (
+    DailyRecipeRetriever,
+    RandomRetriever,
+    Recipe,
+    SearchRetriever,
+)
+
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_NAME
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
-from chefkoch.retrievers import DailyRecipeRetriever, RandomRetriever, SearchRetriever  # type: ignore[import-not-found]
-from chefkoch import Recipe  # type: ignore[import-not-found]
 
 from .const import DOMAIN, DEFAULT_UPDATE_INTERVAL
+
+
+# Monkeypatch Recipe.__info_dict to fix incorrect indexing in version 2.1.2
+def patched_info_dict(self):
+    """Search for the correct JSON-LD script containing Recipe data, with fallback to original index."""
+    if not hasattr(self, "_Recipe__soup"):
+        return {}
+
+    scripts = self._Recipe__soup.find_all("script", type="application/ld+json")
+
+    # 1. Try original logic (index 1) but validate it's actually a Recipe
+    if len(scripts) > 1:
+        try:
+            data = json.loads(scripts[1].text)
+            if isinstance(data, dict) and data.get("@type") == "Recipe":
+                return data
+        except Exception:
+            pass
+
+    # 2. Search for any script containing Recipe data
+    for script in scripts:
+        try:
+            data = json.loads(script.text)
+            if isinstance(data, dict) and data.get("@type") == "Recipe":
+                return data
+            if isinstance(data, list):
+                for item in data:
+                    if item.get("@type") == "Recipe":
+                        return item
+        except Exception:
+            continue
+
+    return {}
+
+
+try:
+    if pkg_version("python-chefkoch") <= "2.1.2":
+        # Apply the patch to the private mangled attribute
+        Recipe._Recipe__info_dict = property(patched_info_dict)  # type: ignore
+except Exception:
+    # If version check fails, apply patch as a safety measure for current known broken state
+    Recipe._Recipe__info_dict = property(patched_info_dict)  # type: ignore
 
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_update_data(
-    hass: core.HomeAssistant, entry: config_entries.ConfigEntry
-) -> dict[str, Any]:
+async def async_update_data(hass: HomeAssistant, entry: ConfigEntry) -> dict[str, Any]:
     """Fetch data from Chefkoch for all configured sensors."""
     sensors: list[dict[str, Any]] = entry.options.get("sensors", [])
     if not sensors:
@@ -214,9 +262,7 @@ def extract_recipe_attributes(recipe_url: str) -> dict[str, Any]:
     return attributes
 
 
-async def async_setup_entry(
-    hass: core.HomeAssistant, entry: config_entries.ConfigEntry
-) -> bool:
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up platform from a ConfigEntry."""
     hass.data.setdefault(DOMAIN, {})
 
@@ -243,16 +289,12 @@ async def async_setup_entry(
     return True
 
 
-async def options_update_listener(
-    hass: core.HomeAssistant, config_entry: config_entries.ConfigEntry
-) -> None:
+async def options_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Handle options update."""
-    await hass.config_entries.async_reload(config_entry.entry_id)
+    await hass.config_entries.async_reload(entry.entry_id)
 
 
-async def async_unload_entry(
-    hass: core.HomeAssistant, entry: config_entries.ConfigEntry
-) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     unload_ok = await hass.config_entries.async_unload_platforms(entry, ["sensor"])
     if unload_ok:
