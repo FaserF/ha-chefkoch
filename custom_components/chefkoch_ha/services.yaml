@@ -1,0 +1,3 @@
+refresh_recipe:
+  name: Refresh Recipes
+  description: Manually trigger a refresh of all Chefkoch recipes (useful for getting a new random recipe).

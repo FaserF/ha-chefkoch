@@ -229,6 +229,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     hass.data[DOMAIN][entry.entry_id] = {"coordinator": coordinator}
 
+    async def handle_refresh_recipe(call):
+        """Handle the service call to refresh recipes."""
+        _LOGGER.debug("Service chefkoch_ha.refresh_recipe called")
+        await coordinator.async_refresh()
+
+    hass.services.async_register(DOMAIN, "refresh_recipe", handle_refresh_recipe)
+
     entry.async_on_unload(entry.add_update_listener(options_update_listener))
     await hass.config_entries.async_forward_entry_setups(entry, ["sensor"])
 

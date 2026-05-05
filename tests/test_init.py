@@ -53,6 +53,7 @@ async def test_setup_and_unload_entry(mock_hass, mock_config_entry):
         mock_hass.config_entries.async_forward_entry_setups.assert_called_once_with(
             mock_config_entry, ["sensor"]
         )
+        mock_hass.services.async_register.assert_called_once()
 
         # Unload
         assert await async_unload_entry(mock_hass, mock_config_entry) is True

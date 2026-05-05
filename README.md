@@ -114,10 +114,19 @@ action:
 If you don't want to wait for the daily refresh, you can force all Chefkoch sensors to update:
 
 ```yaml
-service: homeassistant.reload_config_entry
+service: chefkoch_ha.refresh_recipe
 target:
   entity_id: sensor.chefkoch_random_recipe # Any chefkoch sensor works
 ```
+
+## Services 🛠️
+
+### `chefkoch_ha.refresh_recipe`
+Forces an immediate refresh of all recipes. This is particularly useful for getting a new random recipe without waiting for the next update interval.
+
+| Field | Description |
+| :--- | :--- |
+| `target` | (Required) Target the Chefkoch integration or a specific sensor. |
 
 ## Troubleshooting & Bug Reporting
 
