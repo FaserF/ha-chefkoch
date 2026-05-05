@@ -8,10 +8,11 @@ The **Chefkoch** integration brings recipes from Germany's largest cooking platf
 
 - **Daily Inspiration**: Automatically gets the 'Recipe of the Day'.
 - **Search Suggestions**: Get autocomplete suggestions from Chefkoch when adding a new sensor.
-- **Random Recipes**: Discover new meals with random recipe sensors (Standard, Vegan, Baking).
+- **Plus-Filter**: Automatically filters out "Chefkoch Plus" recipes that are behind a paywall.
+- **Random Recipes**: Discover new meals with random recipe sensors (Standard, Vegan, Vegetarian, Baking).
 - **Custom Search**: Create sensors for specific queries (e.g., "Lasagne", "Vegan Burger").
-- **Powerful Filtering**: Filter by diet (Vegan, Low Carb), detailed categories, origin (Italy, Asia), and more.
-- **Rich Data**: Attributes include ingredients, preparation time, nutritional info (protein, fat, carbs), cuisine style, video links, and images.
+- **Rich Data**: Attributes include ingredients, instructions, preparation time, nutritional info (protein, fat, carbs), cuisine style, video links, and images.
+- **No Flicker**: Sensors maintain their state during background updates or when adding new sensors.
 
 ## Installation 🛠️
 
@@ -47,38 +48,24 @@ This integration works great with HACS.
 
 ### Accessing the data
 
-There will be four new sensors after adding it via HA:
+By default, the following sensors are created:
 - `sensor.chefkoch_random_recipe`: Random recipe
-- `sensor.chefkoch_daily_recipe`: Daily recipe recommendation from chefkoch
+- `sensor.chefkoch_daily_recipe`: Daily recipe recommendation from Chefkoch
 - `sensor.chefkoch_vegan_recipe`: Vegan recipe
+- `sensor.chefkoch_vegetarian_recipe`: Vegetarian recipe
 - `sensor.chefkoch_random_baking_recipe`: Random baking recipe
 
 ## Custom Search Sensors
 
-You can create sensors that match your exact needs.
+You can create sensors that match your exact needs using the configuration wizard.
 
 1. Go to **Settings > Devices & Services** and find your Chefkoch integration.
 2. Click **Configure**.
 3. Select "**Add a new Search Sensor**".
-4. Fill out the form with your desired filters.
+4. Enter a keyword (e.g. "Pasta").
+5. Choose from the **Autocomplete Suggestions** or enter a custom search term.
 
-### Available Filters
-> [!NOTE]
-> Values must be in **German** as they are passed directly to the Chefkoch API.
-
-[Full details here](https://github.com/M-Enderle/chefkoch?tab=readme-ov-file#available-filter-options)
-
-- **Sensor Name**: Friendly name (e.g., "Quick Pasta").
-- **Search Term**: Main keyword (e.g., "Lasagne").
-- **Properties**: `Einfach`, `Schnell`, `Basisrezepte`, `Preiswert`.
-- **Diet**: `Vegetarisch`, `Vegan`, `Kalorienarm`, `Low Carb`, `Ketogen`, `Paleo`, `Fettarm`, `Trennkost`, `Vollwert`.
-- **Categories**: `Auflauf`, `Pizza`, `Salat`, `Suppe`, `Kuchen`, `Dessert`, etc.
-- **Countries**: `Italien`, `Asien`, `Indien`, `Mexiko`, `Deutschland`, etc.
-- **Meal Type**: `Hauptspeise`, `Vorspeise`, `Beilage`, `Dessert`, `Snack`, `Frühstück`.
-- **Max. Preparation Time**: In minutes.
-- **Minimum Rating**: `Alle`, `2`, `3`, `4`, `Top`.
-
-You can add, edit, or remove your custom search sensors at any time through the same **Configure** menu.
+The integration will then find a random matching recipe for that term on every update.
 
 ## Automation Example
 
@@ -102,7 +89,7 @@ action:
 
         **Preparation Time:** {{ state_attr('sensor.chefkoch_random_recipe', 'totalTime') }}
         **Nutrition:** {{ state_attr('sensor.chefkoch_random_recipe', 'calories') }}, {{ state_attr('sensor.chefkoch_random_recipe', 'protein') }} Protein, {{ state_attr('sensor.chefkoch_random_recipe', 'fat') }} Fett, {{ state_attr('sensor.chefkoch_random_recipe', 'carbohydrates') }} Kohlenhydrate
-        **Category:** {{ state_attr('sensor.chefkoch_random_recipe', 'category') }}
+        **Instructions:** {{ state_attr('sensor.chefkoch_random_recipe', 'instructions') | truncate(200) }}
 
         [View Recipe]({{ state_attr('sensor.chefkoch_random_recipe', 'url') }})
       data:
@@ -111,22 +98,18 @@ action:
 
 ### Forcing an Update
 
-If you don't want to wait for the daily refresh, you can force all Chefkoch sensors to update:
+If you don't want to wait for the update interval, you can force all Chefkoch sensors to refresh:
 
 ```yaml
 service: chefkoch_ha.refresh_recipe
 target:
-  entity_id: sensor.chefkoch_random_recipe # Any chefkoch sensor works
+  entity_id: sensor.chefkoch_random_recipe
 ```
 
 ## Services 🛠️
 
 ### `chefkoch_ha.refresh_recipe`
-Forces an immediate refresh of all recipes. This is particularly useful for getting a new random recipe without waiting for the next update interval.
-
-| Field | Description |
-| :--- | :--- |
-| `target` | (Required) Target the Chefkoch integration or a specific sensor. |
+Forces an immediate refresh of all recipes.
 
 ### `chefkoch_ha.add_to_shopping_list`
 Adds all ingredients from a specific Chefkoch sensor to the Home Assistant shopping list.
@@ -135,18 +118,7 @@ Adds all ingredients from a specific Chefkoch sensor to the Home Assistant shopp
 | :--- | :--- |
 | `entity_id` | (Required) The entity ID of the Chefkoch sensor (e.g., `sensor.chefkoch_daily_recipe`). |
 
-## Troubleshooting & Bug Reporting
-
-Open an issue over at [GitHub Issues](https://github.com/FaserF/ha-chefkoch/issues). Please attach logs with debugging enabled.
-
-To enable debugging:
-
-```yaml
-logger:
-  logs:
-    custom_components.chefkoch_ha: debug
-```
-
 ## Credits
 
-Huge thanks to [@THDMoritzEnderle](https://github.com/THDMoritzEnderle/chefkoch) for the underlying python library.
+- Huge thanks to [@THDMoritzEnderle](https://github.com/THDMoritzEnderle/chefkoch) for the original python library.
+- Thanks to [@M-Enderle](https://github.com/M-Enderle/get-chefkoch) for the new [get-chefkoch](https://github.com/M-Enderle/get-chefkoch) library used in the latest versions.
