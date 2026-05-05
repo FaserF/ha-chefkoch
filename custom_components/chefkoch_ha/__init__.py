@@ -180,6 +180,8 @@ def extract_recipe_attributes(recipe_url: str) -> dict[str, Any]:
         "protein": protein,
         "fat": fat,
         "carbohydrates": carbohydrates,
+        "cuisine": safe("recipeCuisine", ""),
+        "video_url": safe("video", {}).get("contentUrl", "") if isinstance(safe("video"), dict) else "",
         "difficulty": safe("difficulty", ""),
         "ingredients": recipe.ingredients or [],
         "instructions": safe("recipeInstructions", ""),

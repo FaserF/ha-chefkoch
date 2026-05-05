@@ -91,6 +91,8 @@ def test_extract_recipe_attributes():
         "keywords": "Tasty",
         "datePublished": "2024-01-01",
         "recipeYield": "4 Portionen",
+        "recipeCuisine": "Italian",
+        "video": {"contentUrl": "http://video"},
         "publisher": {"name": "Chefkoch"},
         "recipeInstructions": "Cook it",
         "difficulty": "easy",
@@ -106,6 +108,8 @@ def test_extract_recipe_attributes():
     assert attributes["protein"] == "20 g"
     assert attributes["fat"] == "10 g"
     assert attributes["carbohydrates"] == "50 g"
+    assert attributes["cuisine"] == "Italian"
+    assert attributes["video_url"] == "http://video"
     assert attributes["rating"] == 4.5
     assert attributes["number_ratings"] == 10
     assert attributes["number_reviews"] == 5

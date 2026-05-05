@@ -11,7 +11,7 @@ The **Chefkoch** integration brings recipes from Germany's largest cooking platf
 - **Random Recipes**: Discover new meals with random recipe sensors (Standard, Vegan, Baking).
 - **Custom Search**: Create sensors for specific queries (e.g., "Lasagne", "Vegan Burger").
 - **Powerful Filtering**: Filter by diet (Vegan, Low Carb), detailed categories, origin (Italy, Asia), and more.
-- **Rich Data**: Attributes include ingredients, preparation time, nutritional info, and images.
+- **Rich Data**: Attributes include ingredients, preparation time, nutritional info (protein, fat, carbs), cuisine style, video links, and images.
 
 ## Installation 🛠️
 
