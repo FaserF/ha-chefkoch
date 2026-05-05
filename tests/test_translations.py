@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 INTEGRATION_DIR = (
-    Path(__file__).resolve().parent.parent / "custom_components" / "speedport"
+    Path(__file__).resolve().parent.parent / "custom_components" / "chefkoch_ha"
 )
 STRINGS_FILE = INTEGRATION_DIR / "strings.json"
 TRANSLATIONS_DIR = INTEGRATION_DIR / "translations"

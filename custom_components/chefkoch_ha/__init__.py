@@ -6,8 +6,8 @@ from typing import Any
 from homeassistant import config_entries, core
 from homeassistant.const import CONF_NAME
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
-from chefkoch.retrievers import DailyRecipeRetriever, RandomRetriever, SearchRetriever
-from chefkoch import Recipe
+from chefkoch.retrievers import DailyRecipeRetriever, RandomRetriever, SearchRetriever  # type: ignore[import-not-found]
+from chefkoch import Recipe  # type: ignore[import-not-found]
 
 from .const import DOMAIN, DEFAULT_UPDATE_INTERVAL
 

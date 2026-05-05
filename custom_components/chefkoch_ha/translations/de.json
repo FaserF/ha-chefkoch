@@ -74,7 +74,8 @@
       }
     },
     "abort": {
-      "no_custom_sensors": "Es sind keine benutzerdefinierten Sensoren zum Bearbeiten oder Entfernen vorhanden."
+      "no_custom_sensors": "Es sind keine benutzerdefinierten Sensoren zum Bearbeiten oder Entfernen vorhanden.",
+      "no_sensors": "Der ausgewählte Sensor konnte nicht gefunden werden."
     }
   }
 }

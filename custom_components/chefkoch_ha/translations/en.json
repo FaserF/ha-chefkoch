@@ -74,7 +74,8 @@
       }
     },
     "abort": {
-      "no_custom_sensors": "There are no custom sensors to edit or remove."
+      "no_custom_sensors": "There are no custom sensors to edit or remove.",
+      "no_sensors": "The selected sensor could not be found."
     }
   }
 }
