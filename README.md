@@ -100,7 +100,7 @@ action:
         **Recipe:** {{ states('sensor.chefkoch_random_recipe') }}
 
         **Preparation Time:** {{ state_attr('sensor.chefkoch_random_recipe', 'totalTime') }}
-        **Calories:** {{ state_attr('sensor.chefkoch_random_recipe', 'calories') }}
+        **Nutrition:** {{ state_attr('sensor.chefkoch_random_recipe', 'calories') }}, {{ state_attr('sensor.chefkoch_random_recipe', 'protein') }} Protein, {{ state_attr('sensor.chefkoch_random_recipe', 'fat') }} Fett, {{ state_attr('sensor.chefkoch_random_recipe', 'carbohydrates') }} Kohlenhydrate
         **Category:** {{ state_attr('sensor.chefkoch_random_recipe', 'category') }}
 
         [View Recipe]({{ state_attr('sensor.chefkoch_random_recipe', 'url') }})

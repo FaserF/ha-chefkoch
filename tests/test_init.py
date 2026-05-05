@@ -82,7 +82,12 @@ def test_extract_recipe_attributes():
     mock_recipe.data_dump.return_value = {
         "aggregateRating": {"ratingValue": 4.5, "ratingCount": 10, "reviewCount": 5},
         "author": {"name": "Chef"},
-        "nutrition": {"calories": "500 kcal"},
+        "nutrition": {
+            "calories": "500 kcal",
+            "proteinContent": "20 g",
+            "fatContent": "10 g",
+            "carbohydrateContent": "50 g",
+        },
         "keywords": "Tasty",
         "datePublished": "2024-01-01",
         "recipeYield": "4 Portionen",
@@ -98,6 +103,9 @@ def test_extract_recipe_attributes():
     assert attributes["status"] == "success"
     assert attributes["author"] == "Chef"
     assert attributes["calories"] == "500 kcal"
+    assert attributes["protein"] == "20 g"
+    assert attributes["fat"] == "10 g"
+    assert attributes["carbohydrates"] == "50 g"
     assert attributes["rating"] == 4.5
     assert attributes["number_ratings"] == 10
     assert attributes["number_reviews"] == 5

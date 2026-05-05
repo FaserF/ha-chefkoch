@@ -162,6 +162,9 @@ def extract_recipe_attributes(recipe_url: str) -> dict[str, Any]:
     # Nutrition
     nutrition = safe("nutrition", {})
     calories = nutrition.get("calories", "") if isinstance(nutrition, dict) else ""
+    protein = nutrition.get("proteinContent", "") if isinstance(nutrition, dict) else ""
+    fat = nutrition.get("fatContent", "") if isinstance(nutrition, dict) else ""
+    carbohydrates = nutrition.get("carbohydrateContent", "") if isinstance(nutrition, dict) else ""
 
     # Times — get_chefkoch provides timedelta objects directly as attributes
     def fmt_time(val: Any) -> str:
@@ -174,6 +177,9 @@ def extract_recipe_attributes(recipe_url: str) -> dict[str, Any]:
         "url": recipe_url,
         "image_url": recipe.image or "",
         "calories": calories,
+        "protein": protein,
+        "fat": fat,
+        "carbohydrates": carbohydrates,
         "difficulty": safe("difficulty", ""),
         "ingredients": recipe.ingredients or [],
         "instructions": safe("recipeInstructions", ""),
