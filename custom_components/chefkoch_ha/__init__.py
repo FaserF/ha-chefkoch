@@ -29,14 +29,20 @@ async def async_update_data(hass: HomeAssistant, entry: ConfigEntry) -> dict[str
         return {}
 
     # Get current data to prevent flickering during partial updates
-    # We use a copy to avoid mutating the current state prematurely
+    # We check both the active coordinator and the persistent cache
     current_data = {}
+    
+    # 1. Try active coordinator
     if (
         DOMAIN in hass.data
         and entry.entry_id in hass.data[DOMAIN]
         and "coordinator" in hass.data[DOMAIN][entry.entry_id]
     ):
         current_data = hass.data[DOMAIN][entry.entry_id]["coordinator"].data or {}
+    
+    # 2. Try persistent cache (survives reloads)
+    if not current_data:
+        current_data = hass.data.get(DOMAIN, {}).get(f"cache_{entry.entry_id}", {})
 
     data: dict[str, Any] = dict(current_data)
 
@@ -104,28 +110,58 @@ async def _fetch_recipe_url(sensor_config: dict[str, Any]) -> str | None:
                 recipe_id = _get_id_from_url(getattr(recipe, "_url", ""))
             
             if recipe_id:
-                # Avoid triggering getMeta via .name property
-                recipe_name = "Daily Recipe"
-                if hasattr(recipe, "_gotMeta") and recipe._gotMeta:
-                    recipe_name = getattr(recipe, "name", recipe_name)
-                return f"{CHEFKOCH_BASE_URL}{recipe_id}/", recipe_name
+                url = f"{CHEFKOCH_BASE_URL}{recipe_id}/"
+                # Check for Plus recipe (no JSON-LD)
+                try:
+                    headers = {"User-Agent": "Mozilla/5.0"}
+                    resp = requests.get(url, headers=headers, timeout=5)
+                    if resp.status_code == 200 and 'application/ld+json' in resp.text:
+                        # Avoid triggering getMeta via .name property
+                        recipe_name = "Daily Recipe"
+                        if hasattr(recipe, "_gotMeta") and recipe._gotMeta:
+                            recipe_name = getattr(recipe, "name", recipe_name)
+                        return url, recipe_name
+                    else:
+                        _LOGGER.debug("Daily recipe is Plus or invalid: %s", url)
+                except Exception as e:
+                    _LOGGER.debug("Error during Daily Plus check for %s: %s", url, e)
         return None, None
 
     def _get_search_url(query, limit=20):
         searcher = Search(query)
         recipes = searcher.recipes(limit=limit)
         if recipes:
-            choice = random.choice(recipes)
-            recipe_id = getattr(choice, "_id", None)
-            if not recipe_id:
-                recipe_id = _get_id_from_url(getattr(choice, "_url", ""))
+            # Try up to 5 random choices to find a non-Plus recipe
+            attempts = min(5, len(recipes))
+            sampled_recipes = random.sample(recipes, attempts)
             
-            if recipe_id:
-                # Avoid triggering getMeta via .name property
-                recipe_name = "Search Recipe"
-                if hasattr(choice, "_gotMeta") and choice._gotMeta:
-                    recipe_name = getattr(choice, "name", recipe_name)
-                return f"{CHEFKOCH_BASE_URL}{recipe_id}/", recipe_name
+            for choice in sampled_recipes:
+                recipe_id = getattr(choice, "_id", None)
+                if not recipe_id:
+                    recipe_id = _get_id_from_url(getattr(choice, "_url", ""))
+                
+                if recipe_id:
+                    url = f"{CHEFKOCH_BASE_URL}{recipe_id}/"
+                    # Pre-check: Does it have JSON-LD? (Plus recipes usually don't)
+                    try:
+                        headers = {"User-Agent": "Mozilla/5.0"}
+                        resp = requests.get(url, headers=headers, timeout=5)
+                        if resp.status_code == 200 and 'application/ld+json' in resp.text:
+                            # Avoid triggering getMeta via .name property
+                            recipe_name = "Search Recipe"
+                            if hasattr(choice, "_gotMeta") and choice._gotMeta:
+                                recipe_name = getattr(choice, "name", recipe_name)
+                            return url, recipe_name
+                        else:
+                            _LOGGER.debug("Skipping Plus or invalid recipe: %s", url)
+                    except Exception as e:
+                        _LOGGER.debug("Error during Plus check for %s: %s", url, e)
+            
+            # Fallback to the first one if all checks fail (to avoid returning None)
+            choice = recipes[0]
+            recipe_id = _get_id_from_url(getattr(choice, "_url", ""))
+            return f"{CHEFKOCH_BASE_URL}{recipe_id}/", "Search Recipe"
+            
         return None, None
 
     try:
@@ -371,9 +407,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         update_interval=scan_interval,
     )
 
+    # Pre-fill coordinator with cached data if available to avoid "unavailable" state on reload
+    cached_data = hass.data.get(DOMAIN, {}).get(f"cache_{entry.entry_id}")
+    if cached_data:
+        coordinator.data = cached_data
+
     await coordinator.async_config_entry_first_refresh()
 
     hass.data[DOMAIN][entry.entry_id] = {"coordinator": coordinator}
+    # Update cache after successful refresh
+    hass.data[DOMAIN][f"cache_{entry.entry_id}"] = coordinator.data
 
     async def handle_refresh_recipe(call):
         """Handle the service call to refresh recipes."""
@@ -419,5 +462,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     unload_ok = await hass.config_entries.async_unload_platforms(entry, ["sensor"])
     if unload_ok:
-        hass.data[DOMAIN].pop(entry.entry_id)
+        # We keep the cache_ entry in hass.data[DOMAIN] to survive the reload flicker
+        if entry.entry_id in hass.data[DOMAIN]:
+            hass.data[DOMAIN].pop(entry.entry_id)
     return unload_ok
