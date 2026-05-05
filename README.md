@@ -128,6 +128,13 @@ Forces an immediate refresh of all recipes. This is particularly useful for gett
 | :--- | :--- |
 | `target` | (Required) Target the Chefkoch integration or a specific sensor. |
 
+### `chefkoch_ha.add_to_shopping_list`
+Adds all ingredients from a specific Chefkoch sensor to the Home Assistant shopping list.
+
+| Field | Description |
+| :--- | :--- |
+| `entity_id` | (Required) The entity ID of the Chefkoch sensor (e.g., `sensor.chefkoch_daily_recipe`). |
+
 ## Troubleshooting & Bug Reporting
 
 Open an issue over at [GitHub Issues](https://github.com/FaserF/ha-chefkoch/issues). Please attach logs with debugging enabled.

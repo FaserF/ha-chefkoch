@@ -75,7 +75,7 @@ async def _fetch_recipe_url(sensor_config: dict[str, Any]) -> str | None:
         elif sensor_type == "random":
             # Random: search with empty query, pick a random result
             searcher = Search()
-            recipes = await asyncio.to_thread(searcher.recipes, limit=20)
+            recipes = await asyncio.to_thread(searcher.recipes, limit=100)
             if recipes:
                 return f"{CHEFKOCH_BASE_URL}{random.choice(recipes).id}/"
             return None
@@ -234,7 +234,29 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER.debug("Service chefkoch_ha.refresh_recipe called")
         await coordinator.async_refresh()
 
+    async def handle_add_to_shopping_list(call):
+        """Add ingredients of a recipe to the shopping list."""
+        entity_id = call.data.get("entity_id")
+        state = hass.states.get(entity_id)
+        if not state:
+            _LOGGER.error("Entity %s not found", entity_id)
+            return
+
+        ingredients = state.attributes.get("ingredients", [])
+        if not ingredients:
+            _LOGGER.warning("No ingredients found for entity %s", entity_id)
+            return
+
+        for ingredient in ingredients:
+            await hass.services.async_call(
+                "shopping_list", "add_item", {"name": ingredient}
+            )
+        _LOGGER.info("Added %d ingredients to shopping list", len(ingredients))
+
     hass.services.async_register(DOMAIN, "refresh_recipe", handle_refresh_recipe)
+    hass.services.async_register(
+        DOMAIN, "add_to_shopping_list", handle_add_to_shopping_list
+    )
 
     entry.async_on_unload(entry.add_update_listener(options_update_listener))
     await hass.config_entries.async_forward_entry_setups(entry, ["sensor"])

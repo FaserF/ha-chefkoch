@@ -1,3 +1,14 @@
 refresh_recipe:
   name: Refresh Recipes
   description: Manually trigger a refresh of all Chefkoch recipes (useful for getting a new random recipe).
+add_to_shopping_list:
+  name: Add to Shopping List
+  description: Adds all ingredients of a recipe to the Home Assistant shopping list.
+  fields:
+    entity_id:
+      name: Entity
+      description: The Chefkoch sensor to get ingredients from.
+      required: true
+      selector:
+        entity:
+          domain: sensor
