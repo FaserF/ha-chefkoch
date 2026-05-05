@@ -70,163 +70,180 @@ async def test_options_update_listener(mock_hass, mock_config_entry):
 
 
 def test_extract_recipe_attributes():
-    """Test extracting attributes from a mock recipe."""
-    with patch("custom_components.chefkoch_ha.Recipe") as mock_recipe_cls:
-        mock_recipe = MagicMock()
-        mock_recipe.title = "Test Recipe"
-        mock_recipe.url = "http://test"
-        mock_recipe.image_url = "http://image"
-        mock_recipe.calories = "500"
-        mock_recipe.difficulty = "easy"
-        mock_recipe.ingredients = ["Salt"]
-        mock_recipe.instructions = ["Cook"]
-        mock_recipe.category = "Main"
-        mock_recipe.servings = "4"
-        mock_recipe.author = "Chef"
-        mock_recipe.publisher = "Publisher"
-        mock_recipe.keywords = "Tasty"
-        mock_recipe.date_published = "2024-01-01"
-        mock_recipe.rating = {"rating": 4.5, "count": 10}
-        mock_recipe.number_ratings = 10
-        mock_recipe.number_reviews = 5
-        mock_recipe.total_time = "1h"
-        mock_recipe.prep_time = "30m"
-        mock_recipe.cook_time = "30m"
-        mock_recipe.rest_time = ""
-        mock_recipe_cls.return_value = mock_recipe
+    """Test extracting attributes from a mock recipe using get_chefkoch API."""
+    mock_recipe = MagicMock()
+    mock_recipe.name = "Test Recipe von Chef"
+    mock_recipe.image = "http://image"
+    mock_recipe.category = "Main"
+    mock_recipe.ingredients = ["Salt"]
+    mock_recipe.totalTime = "0:30:00"
+    mock_recipe.prepTime = "0:10:00"
+    mock_recipe.cookTime = "0:20:00"
+    mock_recipe.data_dump.return_value = {
+        "aggregateRating": {"ratingValue": 4.5, "ratingCount": 10, "reviewCount": 5},
+        "author": {"name": "Chef"},
+        "nutrition": {"calories": "500 kcal"},
+        "keywords": "Tasty",
+        "datePublished": "2024-01-01",
+        "recipeYield": "4 Portionen",
+        "publisher": {"name": "Chefkoch"},
+        "recipeInstructions": "Cook it",
+        "difficulty": "easy",
+    }
 
+    with patch("custom_components.chefkoch_ha.Recipe", return_value=mock_recipe):
         attributes = extract_recipe_attributes("http://test")
-        assert attributes["title"] == "Test Recipe"
-        assert attributes["status"] == "success"
-        assert attributes["author"] == "Chef"
-        assert attributes["totalTime"] == "1h"
+
+    assert attributes["title"] == "Test Recipe"  # "von Chef" stripped
+    assert attributes["status"] == "success"
+    assert attributes["author"] == "Chef"
+    assert attributes["calories"] == "500 kcal"
+    assert attributes["rating"] == 4.5
+    assert attributes["number_ratings"] == 10
+    assert attributes["number_reviews"] == 5
+    assert attributes["totalTime"] == "0:30:00"
 
 
 def test_extract_recipe_attributes_error():
     """Test extracting attributes when recipe parsing fails."""
     with patch("custom_components.chefkoch_ha.Recipe", side_effect=Exception("Failed")):
         attributes = extract_recipe_attributes("http://test")
-        assert attributes["title"] == "Error loading recipe"
-        assert attributes["status"] == "error"
+    assert attributes["title"] == "Error loading recipe"
+    assert attributes["status"] == "error"
+
+
+@pytest.mark.asyncio
+async def test_fetch_recipe_url_daily():
+    """Test fetching daily (recipe of the day) URL."""
+    mock_recipe = MagicMock()
+    mock_recipe.id = "123456"
+    mock_searcher = MagicMock()
+    mock_searcher.recipeOfTheDay.return_value = mock_recipe
+
+    with patch("custom_components.chefkoch_ha.Search", return_value=mock_searcher):
+        url = await _fetch_recipe_url({"type": "daily"})
+
+    assert url == "https://www.chefkoch.de/rezepte/123456/"
 
 
 @pytest.mark.asyncio
 async def test_fetch_recipe_url_random():
     """Test fetching random recipe URL."""
-    with patch("custom_components.chefkoch_ha.RandomRetriever") as mock_retriever_cls:
-        mock_retriever = MagicMock()
-        mock_recipe = MagicMock()
-        mock_recipe.url = "http://random"
-        mock_retriever.get_recipe.return_value = mock_recipe
-        mock_retriever_cls.return_value = mock_retriever
+    mock_recipe = MagicMock()
+    mock_recipe.id = "789"
+    mock_searcher = MagicMock()
+    mock_searcher.recipes.return_value = [mock_recipe]
 
-        url = await _fetch_recipe_url({"type": "random"})
-        assert url == "http://random"
+    with patch("custom_components.chefkoch_ha.Search", return_value=mock_searcher):
+        with patch(
+            "custom_components.chefkoch_ha.random.choice", return_value=mock_recipe
+        ):
+            url = await _fetch_recipe_url({"type": "random"})
 
-
-@pytest.mark.asyncio
-async def test_fetch_recipe_url_daily():
-    """Test fetching daily recipe URL."""
-    with patch(
-        "custom_components.chefkoch_ha.DailyRecipeRetriever"
-    ) as mock_retriever_cls:
-        mock_retriever = MagicMock()
-        mock_recipe = MagicMock()
-        mock_recipe.url = "http://daily"
-        mock_retriever.get_recipes.return_value = [mock_recipe]
-        mock_retriever_cls.return_value = mock_retriever
-
-        url = await _fetch_recipe_url({"type": "daily"})
-        assert url == "http://daily"
+    assert url == "https://www.chefkoch.de/rezepte/789/"
 
 
 @pytest.mark.asyncio
 async def test_fetch_recipe_url_vegan():
     """Test fetching vegan recipe URL."""
-    with patch("custom_components.chefkoch_ha.SearchRetriever") as mock_retriever_cls:
-        mock_retriever = MagicMock()
-        mock_recipe = MagicMock()
-        mock_recipe.url = "http://vegan"
-        mock_retriever.get_recipes.return_value = [mock_recipe]
-        mock_retriever_cls.return_value = mock_retriever
+    mock_recipe = MagicMock()
+    mock_recipe.id = "111"
+    mock_searcher = MagicMock()
+    mock_searcher.recipes.return_value = [mock_recipe]
 
-        url = await _fetch_recipe_url({"type": "vegan"})
-        assert url == "http://vegan"
-        mock_retriever_cls.assert_called_with(health=["Vegan"])
+    with patch(
+        "custom_components.chefkoch_ha.Search", return_value=mock_searcher
+    ) as mock_search_cls:
+        with patch(
+            "custom_components.chefkoch_ha.random.choice", return_value=mock_recipe
+        ):
+            url = await _fetch_recipe_url({"type": "vegan"})
+
+    mock_search_cls.assert_called_with("vegan")
+    assert url == "https://www.chefkoch.de/rezepte/111/"
 
 
 @pytest.mark.asyncio
 async def test_fetch_recipe_url_vegetarian():
     """Test fetching vegetarian recipe URL."""
-    with patch("custom_components.chefkoch_ha.SearchRetriever") as mock_retriever_cls:
-        mock_retriever = MagicMock()
-        mock_recipe = MagicMock()
-        mock_recipe.url = "http://veg"
-        mock_retriever.get_recipes.return_value = [mock_recipe]
-        mock_retriever_cls.return_value = mock_retriever
+    mock_recipe = MagicMock()
+    mock_recipe.id = "222"
+    mock_searcher = MagicMock()
+    mock_searcher.recipes.return_value = [mock_recipe]
 
-        url = await _fetch_recipe_url({"type": "vegetarian"})
-        assert url == "http://veg"
-        mock_retriever_cls.assert_called_with(health=["Vegetarisch"])
+    with patch(
+        "custom_components.chefkoch_ha.Search", return_value=mock_searcher
+    ) as mock_search_cls:
+        with patch(
+            "custom_components.chefkoch_ha.random.choice", return_value=mock_recipe
+        ):
+            url = await _fetch_recipe_url({"type": "vegetarian"})
+
+    mock_search_cls.assert_called_with("vegetarisch")
+    assert url == "https://www.chefkoch.de/rezepte/222/"
 
 
 @pytest.mark.asyncio
 async def test_fetch_recipe_url_baking():
     """Test fetching baking recipe URL."""
-    with patch(
-        "custom_components.chefkoch_ha.DailyRecipeRetriever"
-    ) as mock_retriever_cls:
-        mock_retriever = MagicMock()
-        mock_recipe = MagicMock()
-        mock_recipe.url = "http://baking"
-        mock_retriever.get_recipes.return_value = [mock_recipe]
-        mock_retriever_cls.return_value = mock_retriever
+    mock_recipe = MagicMock()
+    mock_recipe.id = "333"
+    mock_searcher = MagicMock()
+    mock_searcher.recipes.return_value = [mock_recipe]
 
-        url = await _fetch_recipe_url({"type": "baking"})
-        assert url == "http://baking"
-        mock_retriever.get_recipes.assert_called_with(type="backen")
+    with patch(
+        "custom_components.chefkoch_ha.Search", return_value=mock_searcher
+    ) as mock_search_cls:
+        with patch(
+            "custom_components.chefkoch_ha.random.choice", return_value=mock_recipe
+        ):
+            url = await _fetch_recipe_url({"type": "baking"})
+
+    mock_search_cls.assert_called_with("backen")
+    assert url == "https://www.chefkoch.de/rezepte/333/"
 
 
 @pytest.mark.asyncio
 async def test_fetch_recipe_url_search():
     """Test fetching search recipe URL."""
-    with patch("custom_components.chefkoch_ha.SearchRetriever") as mock_retriever_cls:
-        mock_retriever = MagicMock()
-        mock_recipe = MagicMock()
-        mock_recipe.url = "http://search"
-        mock_retriever.get_recipes.return_value = [mock_recipe]
-        mock_retriever_cls.return_value = mock_retriever
+    mock_recipe = MagicMock()
+    mock_recipe.id = "444"
+    mock_searcher = MagicMock()
+    mock_searcher.recipes.return_value = [mock_recipe]
 
-        config = {
-            "type": "search",
-            "search_query": "Pasta",
-            "properties": "Einfach, Schnell",
-        }
-        url = await _fetch_recipe_url(config)
-        assert url == "http://search"
-        mock_retriever_cls.assert_called_with(properties=["Einfach", "Schnell"])
-        mock_retriever.get_recipes.assert_called_with(search_query="Pasta")
+    with patch(
+        "custom_components.chefkoch_ha.Search", return_value=mock_searcher
+    ) as mock_search_cls:
+        with patch(
+            "custom_components.chefkoch_ha.random.choice", return_value=mock_recipe
+        ):
+            url = await _fetch_recipe_url({"type": "search", "search_query": "Pasta"})
+
+    mock_search_cls.assert_called_with("Pasta")
+    assert url == "https://www.chefkoch.de/rezepte/444/"
 
 
 @pytest.mark.asyncio
 async def test_async_update_data(mock_hass, mock_config_entry):
     """Test updating data for all sensors."""
-    mock_hass.async_add_executor_job = AsyncMock(return_value={"title": "Data"})
+    mock_hass.async_add_executor_job = AsyncMock(
+        return_value={"title": "Data", "status": "success"}
+    )
     with patch(
         "custom_components.chefkoch_ha._fetch_recipe_url", return_value="http://recipe"
     ):
         data = await async_update_data(mock_hass, mock_config_entry)
-        assert "test_sensor" in data
-        assert data["test_sensor"] == {"title": "Data"}
+    assert "test_sensor" in data
+    assert data["test_sensor"] == {"title": "Data", "status": "success"}
 
 
 @pytest.mark.asyncio
 async def test_async_update_data_no_url(mock_hass, mock_config_entry):
-    """Test updating data when URL fetch fails."""
+    """Test updating data when URL fetch returns None."""
     with patch("custom_components.chefkoch_ha._fetch_recipe_url", return_value=None):
         data = await async_update_data(mock_hass, mock_config_entry)
-        assert "test_sensor" in data
-        assert data["test_sensor"]["status"] == "warning"
+    assert "test_sensor" in data
+    assert data["test_sensor"]["status"] == "warning"
 
 
 @pytest.mark.asyncio
@@ -237,9 +254,9 @@ async def test_async_update_data_error(mock_hass, mock_config_entry):
         side_effect=Exception("Network error"),
     ):
         data = await async_update_data(mock_hass, mock_config_entry)
-        assert "test_sensor" in data
-        assert data["test_sensor"]["status"] == "error"
-        assert "Network error" in data["test_sensor"]["error_message"]
+    assert "test_sensor" in data
+    assert data["test_sensor"]["status"] == "error"
+    assert "Network error" in data["test_sensor"]["error_message"]
 
 
 @pytest.mark.asyncio

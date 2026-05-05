@@ -1,5 +1,5 @@
 from . import mock_ha  # noqa: F401
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 import pytest
 
 from custom_components.chefkoch_ha.config_flow import (

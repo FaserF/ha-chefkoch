@@ -1,67 +1,21 @@
 import asyncio
-import json
 import logging
+import random
 from datetime import timedelta
-from importlib.metadata import version as pkg_version
 from typing import Any
 
-from chefkoch import (
-    DailyRecipeRetriever,
-    RandomRetriever,
-    Recipe,
-    SearchRetriever,
-)
+from get_chefkoch import Recipe, Search
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_NAME
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
-from .const import DOMAIN, DEFAULT_UPDATE_INTERVAL
-
-
-# Monkeypatch Recipe.__info_dict to fix incorrect indexing in version 2.1.2
-def patched_info_dict(self):
-    """Search for the correct JSON-LD script containing Recipe data, with fallback to original index."""
-    if not hasattr(self, "_Recipe__soup"):
-        return {}
-
-    scripts = self._Recipe__soup.find_all("script", type="application/ld+json")
-
-    # 1. Try original logic (index 1) but validate it's actually a Recipe
-    if len(scripts) > 1:
-        try:
-            data = json.loads(scripts[1].text)
-            if isinstance(data, dict) and data.get("@type") == "Recipe":
-                return data
-        except Exception:
-            pass
-
-    # 2. Search for any script containing Recipe data
-    for script in scripts:
-        try:
-            data = json.loads(script.text)
-            if isinstance(data, dict) and data.get("@type") == "Recipe":
-                return data
-            if isinstance(data, list):
-                for item in data:
-                    if item.get("@type") == "Recipe":
-                        return item
-        except Exception:
-            continue
-
-    return {}
-
-
-try:
-    if pkg_version("python-chefkoch") <= "2.1.2":
-        # Apply the patch to the private mangled attribute
-        Recipe._Recipe__info_dict = property(patched_info_dict)  # type: ignore
-except Exception:
-    # If version check fails, apply patch as a safety measure for current known broken state
-    Recipe._Recipe__info_dict = property(patched_info_dict)  # type: ignore
+from .const import DEFAULT_UPDATE_INTERVAL, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
+
+CHEFKOCH_BASE_URL = "https://www.chefkoch.de/rezepte/"
 
 
 async def async_update_data(hass: HomeAssistant, entry: ConfigEntry) -> dict[str, Any]:
@@ -109,89 +63,68 @@ async def async_update_data(hass: HomeAssistant, entry: ConfigEntry) -> dict[str
 
 
 async def _fetch_recipe_url(sensor_config: dict[str, Any]) -> str | None:
-    """Fetch the recipe URL based on sensor config."""
+    """Fetch the recipe URL based on sensor config using get_chefkoch."""
     sensor_type = sensor_config["type"]
-    retriever: Any = None
 
     try:
-        if sensor_type == "random":
-            retriever = RandomRetriever()
-            recipe = await asyncio.to_thread(retriever.get_recipe)
-            return recipe.url if recipe else None
+        if sensor_type == "daily":
+            searcher = Search()
+            recipe = await asyncio.to_thread(searcher.recipeOfTheDay)
+            return f"{CHEFKOCH_BASE_URL}{recipe.id}/" if recipe else None
 
-        elif sensor_type == "daily":
-            retriever = DailyRecipeRetriever()
-            recipes = await asyncio.to_thread(retriever.get_recipes, type="kochen")
-            return recipes[0].url if recipes and recipes[0] else None
+        elif sensor_type == "random":
+            # Random: search with empty query, pick a random result
+            searcher = Search()
+            recipes = await asyncio.to_thread(searcher.recipes, limit=20)
+            if recipes:
+                return f"{CHEFKOCH_BASE_URL}{random.choice(recipes).id}/"
+            return None
 
         elif sensor_type == "vegan":
-            retriever = SearchRetriever(health=["Vegan"])
-            recipes = await asyncio.to_thread(
-                retriever.get_recipes, search_query="vegan"
-            )
-            # In some cases, the search might return fewer results than expected or different structures
-            return recipes[0].url if recipes and recipes[0] else None
-
-        elif sensor_type == "baking":
-            retriever = DailyRecipeRetriever()
-            recipes = await asyncio.to_thread(retriever.get_recipes, type="backen")
-            return recipes[0].url if recipes and recipes[0] else None
+            searcher = Search("vegan")
+            recipes = await asyncio.to_thread(searcher.recipes, limit=10)
+            if recipes:
+                return f"{CHEFKOCH_BASE_URL}{random.choice(recipes).id}/"
+            return None
 
         elif sensor_type == "vegetarian":
-            retriever = SearchRetriever(health=["Vegetarisch"])
-            recipes = await asyncio.to_thread(
-                retriever.get_recipes, search_query="vegetarisch"
-            )
-            return recipes[0].url if recipes and recipes[0] else None
+            searcher = Search("vegetarisch")
+            recipes = await asyncio.to_thread(searcher.recipes, limit=10)
+            if recipes:
+                return f"{CHEFKOCH_BASE_URL}{random.choice(recipes).id}/"
+            return None
+
+        elif sensor_type == "baking":
+            searcher = Search("backen")
+            recipes = await asyncio.to_thread(searcher.recipes, limit=10)
+            if recipes:
+                return f"{CHEFKOCH_BASE_URL}{random.choice(recipes).id}/"
+            return None
 
         elif sensor_type == "search":
             search_query = sensor_config.get("search_query", "")
-
-            # Helper to parse comma-separated strings into lists
-            def parse_list(key: str) -> list[str] | None:
-                value = sensor_config.get(key, "")
-                if not value:
-                    return None
-                return [item.strip() for item in value.split(",") if item.strip()]
-
-            init_params = {
-                "properties": parse_list("properties"),
-                "health": parse_list("health"),
-                "categories": parse_list("categories"),
-                "countries": parse_list("countries"),
-                "meal_type": parse_list("meal_type"),
-                "prep_times": sensor_config.get("prep_times"),
-                "ratings": sensor_config.get("ratings"),
-                "sort": sensor_config.get("sort"),
-            }
-
-            # Remove None values
-            filtered_params = {k: v for k, v in init_params.items() if v}
-
-            retriever = SearchRetriever(**filtered_params)
-            recipes = await asyncio.to_thread(
-                retriever.get_recipes, search_query=search_query
-            )
-            return recipes[0].url if recipes and recipes[0] else None
+            searcher = Search(search_query if search_query else None)
+            recipes = await asyncio.to_thread(searcher.recipes, limit=10)
+            if recipes:
+                return f"{CHEFKOCH_BASE_URL}{random.choice(recipes).id}/"
+            return None
 
         return None
-    finally:
-        # Some retrievers might implement a close method, ensuring we call it if it exists.
-        # Note: python-chefkoch retrievers might not all have 'close', but good practice if updated.
-        if retriever and hasattr(retriever, "close"):
-            await asyncio.to_thread(retriever.close)
+
+    except Exception as e:
+        _LOGGER.error(
+            "Error fetching recipe URL for sensor type %s: %s", sensor_type, e
+        )
+        return None
 
 
 def extract_recipe_attributes(recipe_url: str) -> dict[str, Any]:
-    """Extract all attributes from a recipe URL robustly."""
+    """Extract all attributes from a recipe URL using get_chefkoch."""
     try:
-        # Initialize Recipe object from the dependency
         recipe = Recipe(recipe_url)
-        _LOGGER.debug("Successfully initialized Recipe object for URL %s.", recipe_url)
+        _LOGGER.debug("Successfully loaded recipe for URL %s.", recipe_url)
     except Exception as e:
-        _LOGGER.error(
-            "Failed to initialize Recipe object for URL %s: %s", recipe_url, e
-        )
+        _LOGGER.error("Failed to load recipe for URL %s: %s", recipe_url, e)
         return {
             "title": "Error loading recipe",
             "url": recipe_url,
@@ -199,66 +132,71 @@ def extract_recipe_attributes(recipe_url: str) -> dict[str, Any]:
             "error_message": f"Could not parse recipe page: {e}",
         }
 
-    def safe_get_attr(recipe_obj: Any, attr_name: str, default: Any = None) -> Any:
-        """Safely get an attribute from the recipe object."""
-        try:
-            return getattr(recipe_obj, attr_name)
-        except Exception as e:
-            _LOGGER.debug(
-                "Could not get attribute '%s' for recipe %s. Error: %s",
-                attr_name,
-                recipe_obj.url,
-                e,
-            )
-            return default
+    # get_chefkoch uses data_dump() for full structured data
+    raw: dict[str, Any] = recipe.data_dump() or {}
 
-    # Extract all attributes and build the data dictionary
-    title = safe_get_attr(recipe, "title", "Title not found")
-    # Cleanup titles that might include "von <User>"
-    if title and " von " in title:
-        title = title.split(" von ")[0]
+    def safe(key: str, default: Any = "") -> Any:
+        val = raw.get(key)
+        return val if val is not None else default
 
-    attributes = {
-        "title": title,
-        "url": recipe.url,
-        "image_url": safe_get_attr(recipe, "image_url", ""),
-        "calories": safe_get_attr(recipe, "calories", ""),
-        "difficulty": safe_get_attr(recipe, "difficulty", ""),
-        "ingredients": safe_get_attr(recipe, "ingredients", []),
-        "instructions": safe_get_attr(recipe, "instructions", ""),
-        "category": safe_get_attr(recipe, "category", ""),
-        "servings": safe_get_attr(recipe, "servings", ""),
-        "author": safe_get_attr(recipe, "author", ""),
-        "publisher": safe_get_attr(recipe, "publisher", ""),
-        "keywords": safe_get_attr(recipe, "keywords", ""),
-        "date_published": str(safe_get_attr(recipe, "date_published", "")),
+    # Name cleanup: strip "von <User>" suffix
+    name: str = recipe.name or safe("name", "")
+    if " von " in name:
+        name = name.split(" von ")[0].strip()
+
+    # Rating
+    agg = safe("aggregateRating", {})
+    rating_value = agg.get("ratingValue") if isinstance(agg, dict) else None
+    rating_count = agg.get("ratingCount") if isinstance(agg, dict) else None
+    review_count = agg.get("reviewCount") if isinstance(agg, dict) else None
+
+    # Author
+    author_raw = safe("author", {})
+    if isinstance(author_raw, dict):
+        author = author_raw.get("name", "")
+    elif isinstance(author_raw, list) and author_raw:
+        author = author_raw[0].get("name", "")
+    else:
+        author = ""
+
+    # Nutrition
+    nutrition = safe("nutrition", {})
+    calories = nutrition.get("calories", "") if isinstance(nutrition, dict) else ""
+
+    # Times — get_chefkoch provides timedelta objects directly as attributes
+    def fmt_time(val: Any) -> str:
+        if val is None:
+            return ""
+        return str(val)
+
+    attributes: dict[str, Any] = {
+        "title": name,
+        "url": recipe_url,
+        "image_url": recipe.image or "",
+        "calories": calories,
+        "difficulty": safe("difficulty", ""),
+        "ingredients": recipe.ingredients or [],
+        "instructions": safe("recipeInstructions", ""),
+        "category": recipe.category or "",
+        "servings": safe("recipeYield", ""),
+        "author": author,
+        "publisher": safe("publisher", {}).get("name", "")
+        if isinstance(safe("publisher"), dict)
+        else "",
+        "keywords": safe("keywords", ""),
+        "date_published": str(safe("datePublished", "")),
         "status": "success",
+        "totalTime": fmt_time(recipe.totalTime),
+        "prepTime": fmt_time(recipe.prepTime),
+        "cookTime": fmt_time(recipe.cookTime),
+        "restTime": "",
+        "rating": rating_value,
+        "rating_count": rating_count,
+        "number_ratings": rating_count,
+        "number_reviews": review_count,
     }
 
-    # Handle time attributes
-    for time_attr, key in [
-        ("total_time", "totalTime"),
-        ("prep_time", "prepTime"),
-        ("cook_time", "cookTime"),
-        ("rest_time", "restTime"),
-    ]:
-        val = safe_get_attr(recipe, time_attr)
-        attributes[key] = str(val) if val else ""
-
-    # Handle rating
-    rating_info = safe_get_attr(recipe, "rating")
-    if isinstance(rating_info, dict):
-        attributes["rating"] = rating_info.get("rating")
-        attributes["rating_count"] = rating_info.get("count")
-    else:
-        attributes["rating"] = rating_info
-        attributes["rating_count"] = None
-
-    # Additional rating statistics
-    attributes["number_ratings"] = safe_get_attr(recipe, "number_ratings", None)
-    attributes["number_reviews"] = safe_get_attr(recipe, "number_reviews", None)
-
-    _LOGGER.debug("Extracted attributes for recipe %s.", recipe.url)
+    _LOGGER.debug("Extracted attributes for recipe %s.", recipe_url)
     return attributes
 
 

@@ -94,13 +94,42 @@ def setup_mocks():
             return self
 
     vol.Schema = MockSchema
-    vol.Optional = lambda x, default=None: x
-    vol.Required = lambda x, default=None: x
-    vol.All = lambda *args: lambda x: x
-    vol.Coerce = lambda x: lambda y: y
-    vol.Range = lambda min=None, max=None: lambda x: x
-    vol.In = lambda x: lambda y: y
+    vol.Optional = lambda x, default=None: x  # type: ignore[assignment]
+    vol.Required = lambda x, default=None: x  # type: ignore[assignment]
+    vol.All = lambda *args: lambda x: x  # type: ignore[assignment]
+    vol.Coerce = lambda x: lambda y: y  # type: ignore[assignment]
+    vol.Range = lambda min=None, max=None: lambda x: x  # type: ignore[assignment]
+    vol.In = lambda x: lambda y: y  # type: ignore[assignment]
     sys.modules["voluptuous"] = vol
+
+    # Mock get_chefkoch
+    mock_recipe = MagicMock()
+    mock_recipe.id = "test_id"
+    mock_recipe.name = "Test Recipe"
+    mock_recipe.image = "http://image"
+    mock_recipe.category = "Test"
+    mock_recipe.ingredients = ["Salt"]
+    mock_recipe.prepTime = "0:10:00"
+    mock_recipe.totalTime = "0:30:00"
+    mock_recipe.cookTime = "0:20:00"
+    mock_recipe.data_dump.return_value = {
+        "aggregateRating": {"ratingValue": 4.5, "ratingCount": 10, "reviewCount": 5},
+        "author": {"name": "Test Author"},
+        "nutrition": {"calories": "500 kcal"},
+        "keywords": "Test",
+        "datePublished": "2024-01-01",
+        "recipeYield": "4 Portionen",
+        "publisher": {"name": "Chefkoch"},
+    }
+
+    mock_search = MagicMock()
+    mock_search.recipes.return_value = [mock_recipe]
+    mock_search.recipeOfTheDay.return_value = mock_recipe
+
+    get_chefkoch_mock = MagicMock()
+    get_chefkoch_mock.Recipe = MagicMock(return_value=mock_recipe)
+    get_chefkoch_mock.Search = MagicMock(return_value=mock_search)
+    sys.modules["get_chefkoch"] = get_chefkoch_mock
 
 
 setup_mocks()
