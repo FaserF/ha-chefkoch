@@ -3,6 +3,7 @@ import uuid
 from homeassistant import config_entries
 from homeassistant.core import callback
 import homeassistant.helpers.config_validation as cv
+from get_chefkoch import Search
 from .const import DOMAIN, DEFAULT_SENSORS, DEFAULT_UPDATE_INTERVAL
 
 # Define the available filter options for the user
@@ -167,6 +168,8 @@ class ChefkochOptionsFlowHandler(config_entries.OptionsFlow):
         self.current_sensors = config_entry.options.get("sensors", [])
         self.sensor_to_edit_id = None
         self.data = dict(config_entry.options)
+        self.search_query = ""
+        self.suggestions = []
 
     def _process_user_input(self, user_input):
         """Process user input to convert lists to strings and handle special values for storage."""
@@ -222,14 +225,56 @@ class ChefkochOptionsFlowHandler(config_entries.OptionsFlow):
         )
 
     async def async_step_add_sensor(self, user_input=None):
+        """Step 1: Ask for search keyword to get suggestions or skip."""
+        if user_input is not None:
+            self.search_query = user_input.get("search_query", "").strip()
+            if self.search_query:
+                try:
+                    searcher = Search()
+                    result = await self.hass.async_add_executor_job(
+                        searcher.suggestions, self.search_query
+                    )
+                    self.suggestions = result.get("suggestions", [])
+                    if self.suggestions:
+                        return await self.async_step_add_sensor_suggestions()
+                except Exception as e:
+                    _LOGGER.error("Error fetching suggestions: %s", e)
+
+            return await self.async_step_add_sensor_form()
+
+        return self.async_show_form(
+            step_id="add_sensor",
+            data_schema=vol.Schema({vol.Optional("search_query"): str}),
+        )
+
+    async def async_step_add_sensor_suggestions(self, user_input=None):
+        """Step 2: Choose from suggestions."""
+        if user_input is not None:
+            choice = user_input.get("suggestion")
+            if choice != "Manual Entry":
+                self.search_query = choice
+            return await self.async_step_add_sensor_form()
+
+        options = self.suggestions + ["Manual Entry"]
+        return self.async_show_form(
+            step_id="add_sensor_suggestions",
+            data_schema=vol.Schema({vol.Required("suggestion"): vol.In(options)}),
+        )
+
+    async def async_step_add_sensor_form(self, user_input=None):
+        """Step 3: Final sensor configuration."""
         if user_input is not None:
             processed_input = self._process_user_input(user_input)
             new_sensor = {"id": str(uuid.uuid4()), "type": "search", **processed_input}
             updated_sensors = self.current_sensors + [new_sensor]
             self.data["sensors"] = updated_sensors
             return self.async_create_entry(title="", data=self.data)
+
+        # Pre-fill search_query with the choice from previous step
         return self.async_show_form(
-            step_id="add_sensor", data_schema=get_search_schema(), last_step=True
+            step_id="add_sensor_form",
+            data_schema=get_search_schema({"search_query": self.search_query}),
+            last_step=True,
         )
 
     async def async_step_edit_sensor(self, user_input=None):

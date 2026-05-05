@@ -7,6 +7,7 @@ The **Chefkoch** integration brings recipes from Germany's largest cooking platf
 ## Features ✨
 
 - **Daily Inspiration**: Automatically gets the 'Recipe of the Day'.
+- **Search Suggestions**: Get autocomplete suggestions from Chefkoch when adding a new sensor.
 - **Random Recipes**: Discover new meals with random recipe sensors (Standard, Vegan, Baking).
 - **Custom Search**: Create sensors for specific queries (e.g., "Lasagne", "Vegan Burger").
 - **Powerful Filtering**: Filter by diet (Vegan, Low Carb), detailed categories, origin (Italy, Asia), and more.

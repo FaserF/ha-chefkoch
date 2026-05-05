@@ -31,6 +31,20 @@
         }
       },
       "add_sensor": {
+        "title": "Suchvorschläge",
+        "description": "Gib einen Suchbegriff ein, um Vorschläge von Chefkoch zu erhalten, oder lass das Feld leer für eine manuelle Eingabe.",
+        "data": {
+          "search_query": "Suchbegriff (z.B. 'Pasta')"
+        }
+      },
+      "add_sensor_suggestions": {
+        "title": "Vorschlag auswählen",
+        "description": "Wähle einen der auf Chefkoch gefundenen Vorschläge aus.",
+        "data": {
+          "suggestion": "Vorschläge"
+        }
+      },
+      "add_sensor_form": {
         "title": "Neuen Such-Sensor hinzufügen",
         "data": {
           "name": "Sensorname (z.B. 'Kuchen')",
