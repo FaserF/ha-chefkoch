@@ -50,6 +50,7 @@ class ChefkochSensor(CoordinatorEntity, SensorEntity):
             identifiers={(DOMAIN, "chefkoch_recipes_device")},
             name="Recipes",
             manufacturer="Chefkoch",
+            model="Recipes",
             configuration_url="https://www.chefkoch.de/",
         )
 

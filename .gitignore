@@ -2,3 +2,5 @@
 megalinter-reports/
 github_conf/
 /tests/__pycache__
+/custom_components/__pycache__
+/custom_components/chefkoch_ha/__pycache__
