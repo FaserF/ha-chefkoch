@@ -1,5 +1,4 @@
 import importlib
-import sys
 from unittest.mock import MagicMock, patch, AsyncMock
 import pytest
 

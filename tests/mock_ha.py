@@ -1,6 +1,6 @@
 import sys
 import types
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
 
 def setup_mocks():
@@ -51,10 +51,33 @@ def setup_mocks():
         def __init__(self, *args, **kwargs):
             self.hass = MagicMock()
             self.context = {}
-            self.async_show_form = MagicMock(side_effect=lambda step_id=None, data_schema=None, errors=None, description_placeholders=None, last_step=None: {"type": "form", "step_id": step_id, "data_schema": data_schema, "errors": errors, "last_step": last_step})
-            self.async_create_entry = MagicMock(side_effect=lambda title="", data={}, options=None: {"type": "create_entry", "title": title, "data": data, "options": options})
-            self.async_abort = MagicMock(side_effect=lambda reason="": {"type": "abort", "reason": reason})
-            self.async_show_menu = MagicMock(side_effect=lambda step_id=None, menu_options=None: {"type": "menu", "step_id": step_id, "menu_options": menu_options})
+            self.async_show_form = MagicMock(
+                side_effect=lambda step_id=None, data_schema=None, errors=None, description_placeholders=None, last_step=None: {
+                    "type": "form",
+                    "step_id": step_id,
+                    "data_schema": data_schema,
+                    "errors": errors,
+                    "last_step": last_step,
+                }
+            )
+            self.async_create_entry = MagicMock(
+                side_effect=lambda title="", data={}, options=None: {
+                    "type": "create_entry",
+                    "title": title,
+                    "data": data,
+                    "options": options,
+                }
+            )
+            self.async_abort = MagicMock(
+                side_effect=lambda reason="": {"type": "abort", "reason": reason}
+            )
+            self.async_show_menu = MagicMock(
+                side_effect=lambda step_id=None, menu_options=None: {
+                    "type": "menu",
+                    "step_id": step_id,
+                    "menu_options": menu_options,
+                }
+            )
 
         def _async_current_entries(self, *args, **kwargs):
             return []

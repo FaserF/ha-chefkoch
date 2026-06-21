@@ -1,5 +1,9 @@
 name: Report an issue
-description: Report an issue with the unofficial Chefkoch Integration
+description: Report an issue with the Chefkoch Integration
+title: "[Bug]: "
+labels: ["bug"]
+assignees:
+  - FaserF
 body:
   - type: markdown
     attributes:
@@ -30,15 +34,6 @@ body:
         Can be found in: [Settings -> About](https://my.home-assistant.io/redirect/info/).
 
         [![Open your Home Assistant instance and show your Home Assistant version information.](https://my.home-assistant.io/badges/info.svg)](https://my.home-assistant.io/redirect/info/)
-  - type: input
-    id: version_integration
-    validations:
-      required: true
-    attributes:
-      label: What version of chefkoch Integration has the issue?
-      placeholder:
-      description: >
-        The version from the release page you are using. Latest version can be found here: https://github.com/FaserF/ha-chefkoch/releases/latest
   - type: dropdown
     validations:
       required: true
@@ -53,6 +48,15 @@ body:
         - Home Assistant Container
         - Home Assistant Supervised
         - Home Assistant Core
+  - type: input
+    id: version_integration
+    validations:
+      required: true
+    attributes:
+      label: What version of this Integration has the issue?
+      placeholder:
+      description: >
+        The version from the release page you are using. Latest version can be found here: https://github.com/FaserF/ha-chefkoch/releases/latest
   - type: markdown
     attributes:
       value: |
@@ -67,7 +71,7 @@ body:
   - type: textarea
     attributes:
       label: Anything in the logs that might be useful for us?
-      description: Please enable debugging for this integration and paste the log output here. See https://github.com/FaserF/ha-chefkoch#bug-reporting
+      description: For example, error message, or stack traces.
       render: txt
   - type: textarea
     attributes:
