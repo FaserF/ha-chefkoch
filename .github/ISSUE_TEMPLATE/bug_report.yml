@@ -1,83 +1,106 @@
-name: Report an issue
-description: Report an issue with the Chefkoch Integration
+﻿name: Bug Report
+description: Report a bug or unexpected behavior in the Chefkoch integration
 title: '[Bug]: '
-labels:
-- bug
+labels: ['bug', 'triage']
 assignees:
-- FaserF
+  - FaserF
 body:
-- type: markdown
-  attributes:
-    value: |
-      This issue form is for reporting bugs only!
+  - type: markdown
+    attributes:
+      value: |
+        ## Before You Submit
+        - 🔍 Search [existing issues](https://github.com/FaserF/ha-chefkoch/issues) to avoid duplicates.
+        - 📖 Check the [documentation](https://github.com/FaserF/ha-chefkoch/blob/master/README.md).
+        - 🏠 View the integration: [![Open your Home Assistant instance and show the integration.](https://my.home-assistant.io/badges/integration.svg)](https://my.home-assistant.io/redirect/integration/?domain=chefkoch)
 
-      If you have a feature or enhancement request, please use the feature request template!
-- type: textarea
-  validations:
-    required: true
-  attributes:
-    label: The problem
-    description: Describe the issue you are experiencing here. Provide a clear and
-      concise description of what the problem is.
-- type: markdown
-  attributes:
-    value: '## Environment
+  - type: input
+    id: integration_version
+    attributes:
+      label: Integration Version
+      description: Which version of the Chefkoch integration are you using?
+      placeholder: e.g. 1.2.0
+    validations:
+      required: true
 
-      '
-- type: input
-  id: version
-  validations:
-    required: true
-  attributes:
-    label: What version of Home Assistant Core has the issue?
-    placeholder: core-
-    description: |
-      Can be found in: [Settings -> About](https://my.home-assistant.io/redirect/info/).
-      [![Open your Home Assistant instance and show your Home Assistant version information.](https://my.home-assistant.io/badges/info.svg)](https://my.home-assistant.io/redirect/info/)
-- type: dropdown
-  validations:
-    required: true
-  attributes:
-    label: What type of installation are you running?
-    description: |
-      Can be found in: [Settings -> About](https://my.home-assistant.io/redirect/info/).
-      [![Open your Home Assistant instance and show your Home Assistant version information.](https://my.home-assistant.io/badges/info.svg)](https://my.home-assistant.io/redirect/info/)
-    options:
-    - Home Assistant OS
-    - Home Assistant Container
-    - Home Assistant Supervised
-    - Home Assistant Core
-- type: input
-  id: version_integration
-  validations:
-    required: true
-  attributes:
-    label: What version of this Integration has the issue?
-    placeholder: null
-    description: 'The version from the release page you are using. Latest version
-      can be found here: https://github.com/FaserF/ha-chefkoch/releases/latest
+  - type: input
+    id: ha_version
+    attributes:
+      label: Home Assistant Version
+      description: |
+        Which version of Home Assistant are you running?
+        [![Open your Home Assistant instance and show your Home Assistant information.](https://my.home-assistant.io/badges/info.svg)](https://my.home-assistant.io/redirect/info/)
+      placeholder: e.g. 2025.6.0
+    validations:
+      required: true
 
-      '
-- type: markdown
-  attributes:
-    value: '# Details
+  - type: dropdown
+    id: ha_installation_type
+    attributes:
+      label: Home Assistant Installation Type
+      description: How is Home Assistant installed?
+      options:
+        - Home Assistant OS
+        - Home Assistant Container
+        - Home Assistant Supervised
+        - Home Assistant Core
+    validations:
+      required: true
 
-      '
-- type: textarea
-  attributes:
-    label: Example YAML snippet
-    description: |
-      If applicable, please provide an example piece of YAML that can help reproduce this problem.
-      This can be from an automation, script, scene or configuration.
-    render: yaml
-- type: textarea
-  attributes:
-    label: Anything in the logs that might be useful for us?
-    description: For example, error message, or stack traces.
-    render: txt
-- type: textarea
-  attributes:
-    label: Additional information
-    description: 'If you have any additional information for us, use the field below.
+  - type: input
+    id: search_query_url
+    attributes:
+      label: Search Query / Recipe URL
+      description: What search query or recipe URL were you using? (if applicable)
+      placeholder: e.g. "Pasta" or https://www.chefkoch.de/rezepte/...
+    validations:
+      required: false
 
-      '
+  - type: textarea
+    id: bug_description
+    attributes:
+      label: Describe the Bug
+      description: A clear and concise description of what the bug is.
+      placeholder: Tell us what happened...
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps_to_reproduce
+    attributes:
+      label: Steps to Reproduce
+      description: Steps to reproduce the behavior.
+      placeholder: |
+        1. Go to '...'
+        2. Click on '...'
+        3. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected_behavior
+    attributes:
+      label: Expected Behavior
+      description: A clear and concise description of what you expected to happen.
+      placeholder: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostic Information
+      description: |
+        Paste diagnostic information here (optional but helpful). Download from:
+        [![Open your Home Assistant instance and show the integration diagnostics.](https://my.home-assistant.io/badges/diagnostics.svg)](https://my.home-assistant.io/redirect/diagnostics/)
+      render: yaml
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant Log Output
+      description: Paste any relevant log output here. Enable debug logging for the integration if possible.
+      render: shell
+    validations:
+      required: false

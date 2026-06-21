@@ -1,40 +1,63 @@
-name: Feature request
-description: Suggest an idea for this integration
-title: '[Feature Request]: '
-labels:
-- enhancement
+﻿name: Feature Request
+description: Suggest a new feature or improvement for the Chefkoch integration
+title: '[Feature]: '
+labels: ['enhancement', 'triage']
 assignees:
-- FaserF
+  - FaserF
 body:
-- type: markdown
-  attributes:
-    value: |
-      This feature request request form is for feature requests only!
+  - type: markdown
+    attributes:
+      value: |
+        ## Before You Submit
+        - 🔍 Search [existing feature requests](https://github.com/FaserF/ha-chefkoch/issues?q=is%3Aissue+label%3Aenhancement) to avoid duplicates.
+        - 📖 Check the [documentation](https://github.com/FaserF/ha-chefkoch/blob/master/README.md).
 
-      If you have a bug or issue request, please use the bug report template!
-- type: textarea
-  validations:
-    required: true
-  attributes:
-    label: The request
-    description: A clear and concise description of what you want to happen.
-- type: markdown
-  attributes:
-    value: '## Environment
+  - type: textarea
+    id: problem_description
+    attributes:
+      label: Problem Description
+      description: Is your feature request related to a problem? Please describe it clearly.
+      placeholder: e.g. I'm always frustrated when...
+    validations:
+      required: true
 
-      '
-- type: markdown
-  attributes:
-    value: '# Details
+  - type: textarea
+    id: solution_description
+    attributes:
+      label: Proposed Solution
+      description: Describe the solution or feature you would like to see.
+      placeholder: e.g. It would be great if...
+    validations:
+      required: true
 
-      '
-- type: textarea
-  attributes:
-    label: Is your feature request related to a problem?
-    render: txt
-    description: A clear and concise description of what the problem is. Ex. I'm always
-      frustrated when [...]
-- type: textarea
-  attributes:
-    label: Additional information
-    description: If you have any additional information for us, use the field below.
+  - type: dropdown
+    id: feature_area
+    attributes:
+      label: Feature Area
+      description: Which area of the integration does this feature relate to?
+      options:
+        - Recipe search / discovery
+        - Recipe data (ingredients, steps)
+        - Favorite / category filtering
+        - Meal planning
+        - Sensor / entity improvements
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Describe any alternative solutions or features you have considered.
+      placeholder: e.g. I also considered...
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: Additional Context
+      description: Add any other context, screenshots, or references about the feature request.
+    validations:
+      required: false
