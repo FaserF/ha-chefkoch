@@ -50,7 +50,7 @@ body:
     id: search_query_url
     attributes:
       label: Search Query / Recipe URL
-      description: What search query or recipe URL were you using? (if applicable)
+      description: What search query or recipe URL were you using? (if applicable) (Do NOT share sensitive passwords, credentials, or public API keys. Use example.com or 192.168.1.1 instead.)
       placeholder: e.g. "Pasta" or https://www.chefkoch.de/rezepte/...
     validations:
       required: false
