@@ -214,7 +214,8 @@ jobs:
 
       - name: 📦 Zip Component
         run: |
-          zip -r chefkoch_ha.zip custom_components/chefkoch_ha
+          cd custom_components/chefkoch_ha
+          zip -r ../../chefkoch_ha.zip .
 
       - name: Download Release Body Artifact
         uses: actions/download-artifact@v8
