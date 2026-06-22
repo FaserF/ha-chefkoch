@@ -5,3 +5,10 @@ github_conf/
 /custom_components/__pycache__
 /custom_components/chefkoch_ha/__pycache__
 config_entry-*.json
+
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+__pycache__/
+.venv/
+*.pyc
