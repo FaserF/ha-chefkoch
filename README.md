@@ -1,4 +1,5 @@
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
+[![Downloads (Current release)](https://img.shields.io/github/downloads/FaserF/ha-chefkoch/latest/integration.zip?label=Downloads%20(Current%20release)&style=for-the-badge)](https://github.com/FaserF/ha-chefkoch/releases)
 
 # Chefkoch Home Assistant Sensor 👨‍🍳
 
