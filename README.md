@@ -1,10 +1,26 @@
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
-[![Downloads (Current release)](https://img.shields.io/github/downloads/FaserF/ha-chefkoch/latest/integration.zip?label=Downloads%20(Current%20release)&style=for-the-badge)](https://github.com/FaserF/ha-chefkoch/releases)
+[![Downloads (Current release)](https://img.shields.io/github/downloads/FaserF/ha-chefkoch/latest/chefkoch_ha.zip?label=Downloads%20(Current%20release)&style=for-the-badge)](https://github.com/FaserF/ha-chefkoch/releases)
 
 # Chefkoch Home Assistant Sensor 👨‍🍳
 
 The **Chefkoch** integration brings recipes from Germany's largest cooking platform, [Chefkoch.de](https://www.chefkoch.de/), directly into Home Assistant.
 
+---
+
+## ❤️ Support This Project
+
+> I maintain this integration in my **free time alongside my regular job** — bug hunting, new features, and testing on real hardware. Test devices cost money, and every donation helps me stay independent and free up more time for open-source work.
+>
+> Donations are completely voluntary — but the more support I receive, the less I depend on other income sources and the more time I can realistically invest into these GitHub projects. 💪
+
+<div align="center">
+
+[![GitHub Sponsors](https://img.shields.io/badge/Sponsor%20on-GitHub-%23EA4AAA?style=for-the-badge&logo=github-sponsors&logoColor=white)](https://github.com/sponsors/FaserF)&nbsp;&nbsp;
+[![PayPal](https://img.shields.io/badge/Donate%20via-PayPal-%2300457C?style=for-the-badge&logo=paypal&logoColor=white)](https://paypal.me/FaserF)
+
+</div>
+
+---
 ## Features ✨
 
 - **Daily Inspiration**: Automatically gets the 'Recipe of the Day'.
