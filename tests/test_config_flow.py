@@ -1,16 +1,17 @@
 import importlib
-from unittest.mock import MagicMock, patch, AsyncMock
-import pytest
+from unittest.mock import AsyncMock, MagicMock, patch
 
-# Ensure mock_ha is applied before anything else
-from . import mock_ha  # noqa: F401
+import pytest
 
 # Reload the config_flow module to ensure it picks up the mocks
 import custom_components.chefkoch_ha.config_flow
 
+# Ensure mock_ha is applied before anything else
+from . import mock_ha  # noqa: F401
+
 importlib.reload(custom_components.chefkoch_ha.config_flow)
 
-from custom_components.chefkoch_ha.config_flow import (  # noqa: E402
+from custom_components.chefkoch_ha.config_flow import (
     ChefkochConfigFlow,
     ChefkochOptionsFlowHandler,
 )

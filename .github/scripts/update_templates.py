@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
+import json
 import os
 import re
 import sys
-import urllib.request
 import urllib.error
-import json
+import urllib.request
 
 
 def get_latest_ha_version():

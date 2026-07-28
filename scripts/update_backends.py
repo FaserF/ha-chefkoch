@@ -1,7 +1,7 @@
+import html
+import os
 import re
 import urllib.request
-import os
-import html
 from urllib.parse import parse_qs
 
 # Source URL

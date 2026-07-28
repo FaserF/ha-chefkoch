@@ -8,7 +8,6 @@ from typing import Any
 import requests
 from bs4 import BeautifulSoup
 from get_chefkoch import Search  # type: ignore[import-untyped]
-
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_NAME
 from homeassistant.core import HomeAssistant

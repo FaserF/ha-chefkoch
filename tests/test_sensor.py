@@ -1,9 +1,11 @@
-from . import mock_ha  # noqa: F401
 from unittest.mock import MagicMock
+
 import pytest
 
-from custom_components.chefkoch_ha.sensor import async_setup_entry, ChefkochSensor
 from custom_components.chefkoch_ha.const import DOMAIN
+from custom_components.chefkoch_ha.sensor import ChefkochSensor, async_setup_entry
+
+from . import mock_ha  # noqa: F401
 
 
 @pytest.mark.asyncio

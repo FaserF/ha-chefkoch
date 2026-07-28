@@ -1,15 +1,18 @@
-from . import mock_ha  # noqa: F401
 from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
+
 from custom_components.chefkoch_ha import (
+    _fetch_recipe_url,
     async_setup_entry,
     async_unload_entry,
-    options_update_listener,
     async_update_data,
     extract_recipe_attributes,
-    _fetch_recipe_url,
+    options_update_listener,
 )
 from custom_components.chefkoch_ha.const import DOMAIN
+
+from . import mock_ha  # noqa: F401
 
 
 @pytest.fixture
@@ -281,9 +284,9 @@ def test_fetch_recipe_url_api_filters():
     mock_resp.json.return_value = api_response
 
     with patch("requests.get", return_value=mock_resp) as mock_get:
-        from custom_components.chefkoch_ha import _fetch_recipe_url
-
         import asyncio
+
+        from custom_components.chefkoch_ha import _fetch_recipe_url
 
         url = asyncio.run(_fetch_recipe_url(sensor_config))
 
@@ -528,15 +531,17 @@ async def test_generate_meal_plan(mock_hass, mock_config_entry):
     service_call = MagicMock()
     service_call.data = {"days": 2, "query": "Pasta"}
 
-    with patch(
-        "custom_components.chefkoch_ha._fetch_recipe_url",
-        return_value="https://www.chefkoch.de/rezepte/111111/",
-    ):
-        with patch(
+    with (
+        patch(
+            "custom_components.chefkoch_ha._fetch_recipe_url",
+            return_value="https://www.chefkoch.de/rezepte/111111/",
+        ),
+        patch(
             "custom_components.chefkoch_ha.fetch_recipe_attributes_from_api",
             return_value=recipe_attrs,
-        ):
-            await handler(service_call)
+        ),
+    ):
+        await handler(service_call)
 
     assert mock_hass.bus.async_fire.called
     event_name, event_data = mock_hass.bus.async_fire.call_args[0]

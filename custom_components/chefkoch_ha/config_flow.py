@@ -1,12 +1,14 @@
 import logging
-import voluptuous as vol
 import uuid
+
+import homeassistant.helpers.config_validation as cv
 import requests
+import voluptuous as vol
+from get_chefkoch import Search  # type: ignore[import-untyped]
 from homeassistant import config_entries
 from homeassistant.core import callback
-import homeassistant.helpers.config_validation as cv
-from get_chefkoch import Search  # type: ignore[import-untyped]
-from .const import DOMAIN, DEFAULT_SENSORS, DEFAULT_UPDATE_INTERVAL
+
+from .const import DEFAULT_SENSORS, DEFAULT_UPDATE_INTERVAL, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
