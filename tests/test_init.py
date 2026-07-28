@@ -226,6 +226,36 @@ def test_extract_recipe_attributes_api():
     assert "--- Hauptzutaten ---" in attributes["ingredients"]
 
 
+def test_fetch_recipe_comments_from_api():
+    """Test fetching recipe comments from API."""
+    from custom_components.chefkoch_ha import fetch_recipe_comments_from_api
+
+    comments_json = {
+        "results": [
+            {
+                "id": "1",
+                "text": "Tolle Soße!",
+                "owner": {"displayName": "Anna"},
+            },
+            {
+                "id": "2",
+                "text": "Sehr lecker.",
+                "owner": {"displayName": "Ben"},
+            },
+        ]
+    }
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.json.return_value = comments_json
+
+    with patch("requests.get", return_value=mock_resp):
+        comments = fetch_recipe_comments_from_api("123456", limit=2)
+
+    assert len(comments) == 2
+    assert comments[0] == "Anna: Tolle Soße!"
+    assert comments[1] == "Ben: Sehr lecker."
+
+
 def test_fetch_recipe_url_api_filters():
     """Test fetching recipe URL with API search filters (prep_times, ratings, sort)."""
     sensor_config = {

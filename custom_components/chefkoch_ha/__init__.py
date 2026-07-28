@@ -316,6 +316,34 @@ def _find_recipe_in_json(data: Any) -> dict[str, Any] | None:
     return None
 
 
+def fetch_recipe_comments_from_api(recipe_id: str, limit: int = 5) -> list[str]:
+    """Fetch top user comments for a recipe from Chefkoch API."""
+    url = f"https://api.chefkoch.de/v2/recipes/{recipe_id}/comments"
+    headers = {"User-Agent": "Mozilla/5.0"}
+    try:
+        resp = requests.get(
+            url, params={"limit": str(limit)}, headers=headers, timeout=5
+        )
+        if resp.status_code == 200:
+            data = resp.json()
+            comments = []
+            for item in data.get("results", []):
+                if isinstance(item, dict):
+                    text = item.get("text", "").strip()
+                    owner = item.get("owner", {})
+                    author = (
+                        owner.get("displayName") or owner.get("username")
+                        if isinstance(owner, dict)
+                        else ""
+                    )
+                    if text:
+                        comments.append(f"{author}: {text}" if author else text)
+            return comments
+    except Exception as err:
+        _LOGGER.debug("Failed to fetch comments for recipe %s: %s", recipe_id, err)
+    return []
+
+
 def fetch_recipe_attributes_from_api(recipe_id: str) -> dict[str, Any]:
     """Fetch recipe attributes directly from Chefkoch v2 API."""
     api_url = f"https://api.chefkoch.de/v2/recipes/{recipe_id}"
@@ -429,6 +457,8 @@ def fetch_recipe_attributes_from_api(recipe_id: str) -> dict[str, Any]:
         if isinstance(b, dict) and b.get("title")
     ]
 
+    comments = fetch_recipe_comments_from_api(recipe_id, limit=5)
+
     attributes: dict[str, Any] = {
         "title": title,
         "subtitle": data.get("subtitle", ""),
@@ -454,6 +484,7 @@ def fetch_recipe_attributes_from_api(recipe_id: str) -> dict[str, Any]:
         "tags": tags if isinstance(tags, list) else [],
         "saved_recipes_count": data.get("savedRecipesCount"),
         "view_count": data.get("viewCount"),
+        "top_comments": comments,
         "date_published": str(data.get("createdAt", "")),
         "status": "success",
         "totalTime": total_time,
@@ -635,6 +666,7 @@ def extract_recipe_attributes_webscraping(recipe_url: str) -> dict[str, Any]:
             "tags": tags_list,
             "saved_recipes_count": None,
             "view_count": None,
+            "top_comments": [],
             "date_published": str(safe("datePublished", "")),
             "status": "success",
             "totalTime": _parse_duration(safe("totalTime")),
