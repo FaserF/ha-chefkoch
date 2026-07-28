@@ -6,7 +6,7 @@ from urllib.parse import parse_qs
 
 # Source URL
 URL = "https://dbf.finalrewind.org/_backend"
-CONST_FILE = os.path.join("custom_components", "db_infoscreen", "const.py")
+CONST_FILE = os.path.join("custom_components", "chefkoch_ha", "const.py")
 README_FILE = "README.md"
 DOCS_CONFIG_FILE = os.path.join("docs", "configuration.md")
 
