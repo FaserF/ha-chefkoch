@@ -1,6 +1,7 @@
 import logging
 import voluptuous as vol
 import uuid
+import requests
 from homeassistant import config_entries
 from homeassistant.core import callback
 import homeassistant.helpers.config_validation as cv
@@ -219,7 +220,12 @@ class ChefkochOptionsFlowHandler(config_entries.OptionsFlow):
                     self.suggestions = result.get("suggestions", [])
                     if self.suggestions:
                         return await self.async_step_add_sensor_suggestions()
-                except (requests.RequestException, AttributeError, ValueError, KeyError) as e:
+                except (
+                    requests.RequestException,
+                    AttributeError,
+                    ValueError,
+                    KeyError,
+                ) as e:
                     _LOGGER.error("Error fetching suggestions: %s", e)
 
             return await self.async_step_add_sensor_form()

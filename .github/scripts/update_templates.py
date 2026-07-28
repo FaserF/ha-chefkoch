@@ -30,7 +30,13 @@ def get_service_version(repo_name):
             with urllib.request.urlopen(req, timeout=5) as response:
                 data = json.loads(response.read().decode("utf-8"))
                 return data["latest"][0]
-        except (urllib.error.URLError, OSError, json.JSONDecodeError, KeyError, IndexError) as e:
+        except (
+            urllib.error.URLError,
+            OSError,
+            json.JSONDecodeError,
+            KeyError,
+            IndexError,
+        ) as e:
             print(f"Error fetching OpenWrt version: {e}")
             return "25.12.4"
 
@@ -179,7 +185,14 @@ def clean_and_update_template(file_path, integration_version, ha_version, repo_n
             if (
                 any(
                     k in desc_lower
-                    for k in ["domain", "host", "ip address", "url", "instance", "address"]
+                    for k in [
+                        "domain",
+                        "host",
+                        "ip address",
+                        "url",
+                        "instance",
+                        "address",
+                    ]
                 )
                 and "not share" not in desc_lower
                 and "private" not in desc_lower

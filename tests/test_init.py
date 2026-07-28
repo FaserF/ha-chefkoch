@@ -417,9 +417,7 @@ async def test_fetch_recipe_url_plus_skip():
         patch("requests.get", side_effect=mock_get),
         patch("random.sample", return_value=[recipe_plus, recipe_ok]),
     ):
-        url = await _fetch_recipe_url(
-            {"type": "search", "search_query": "test"}
-        )
+        url = await _fetch_recipe_url({"type": "search", "search_query": "test"})
 
     assert url == "https://www.chefkoch.de/rezepte/2/"
 

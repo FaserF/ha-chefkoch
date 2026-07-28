@@ -225,7 +225,12 @@ async def _fetch_recipe_url(sensor_config: dict[str, Any]) -> str | None:
         if sensor_type == "daily":
             try:
                 url, name = await asyncio.to_thread(_get_daily_url)
-            except (requests.RequestException, AttributeError, ValueError, TypeError) as daily_err:
+            except (
+                requests.RequestException,
+                AttributeError,
+                ValueError,
+                TypeError,
+            ) as daily_err:
                 _LOGGER.warning(
                     "Daily recipe fetch failed: %s. Falling back to random.", daily_err
                 )
@@ -267,7 +272,7 @@ async def _fetch_recipe_url(sensor_config: dict[str, Any]) -> str | None:
 
         return None
 
-    except Exception as e:
+    except Exception:
         _LOGGER.exception(
             "Exception during recipe URL fetch for sensor type %s",
             sensor_type,
@@ -828,7 +833,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                                 fetch_recipe_attributes_from_api, recipe_id
                             )
                             title = attrs.get("title", "")
-                        except (requests.RequestException, KeyError, ValueError) as fetch_err:
+                        except (
+                            requests.RequestException,
+                            KeyError,
+                            ValueError,
+                        ) as fetch_err:
                             _LOGGER.debug(
                                 "Failed to fetch recipe title for day %d: %s",
                                 day_index + 1,
