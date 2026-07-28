@@ -680,6 +680,23 @@ def extract_recipe_attributes(recipe_url: str) -> dict[str, Any]:
     return extract_recipe_attributes_webscraping(recipe_url)
 
 
+def _scale_ingredient(ingredient: str, factor: float) -> str:
+    """Scale numeric quantities in an ingredient string by a factor."""
+    if factor == 1.0 or ingredient.startswith("---"):
+        return ingredient
+    import re
+
+    def replace_num(match):
+        num_str = match.group(0).replace(",", ".")
+        try:
+            val = float(num_str) * factor
+            return f"{val:g}".replace(".", ",")
+        except ValueError:
+            return match.group(0)
+
+    return re.sub(r"\b\d+(?:[\.,]\d+)?\b", replace_num, ingredient)
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up platform from a ConfigEntry."""
     hass.data.setdefault(DOMAIN, {})
@@ -716,6 +733,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     async def handle_add_to_shopping_list(call):
         """Add ingredients of a recipe to the shopping list."""
         entity_id = call.data.get("entity_id")
+        target_servings = call.data.get("servings")
         state = hass.states.get(entity_id)
         if not state:
             _LOGGER.error("Entity %s not found", entity_id)
@@ -726,11 +744,34 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             _LOGGER.warning("No ingredients found for entity %s", entity_id)
             return
 
+        scale_factor = 1.0
+        if target_servings and isinstance(target_servings, (int, float)):
+            orig_servings_str = str(state.attributes.get("servings", ""))
+            import re
+
+            m = re.search(r"\d+", orig_servings_str)
+            if m:
+                try:
+                    orig_servings = int(m.group(0))
+                    if orig_servings > 0:
+                        scale_factor = float(target_servings) / float(orig_servings)
+                except ValueError:
+                    pass
+
         for ingredient in ingredients:
-            await hass.services.async_call(
-                "shopping_list", "add_item", {"name": ingredient}
+            item_name = (
+                _scale_ingredient(ingredient, scale_factor)
+                if scale_factor != 1.0
+                else ingredient
             )
-        _LOGGER.info("Added %d ingredients to shopping list", len(ingredients))
+            await hass.services.async_call(
+                "shopping_list", "add_item", {"name": item_name}
+            )
+        _LOGGER.info(
+            "Added %d ingredients to shopping list (scaled factor: %s)",
+            len(ingredients),
+            scale_factor,
+        )
 
     hass.services.async_register(DOMAIN, "refresh_recipe", handle_refresh_recipe)
     hass.services.async_register(

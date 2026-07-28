@@ -401,3 +401,50 @@ async def test_async_update_data(mock_hass, mock_config_entry):
         data = await async_update_data(mock_hass, mock_config_entry)
     assert "test_sensor" in data
     assert data["test_sensor"] == {"title": "Data", "status": "success"}
+
+
+def test_scale_ingredient():
+    """Test scaling numeric quantities in ingredient string."""
+    from custom_components.chefkoch_ha import _scale_ingredient
+
+    assert _scale_ingredient("400 g Spaghetti", 0.5) == "200 g Spaghetti"
+    assert _scale_ingredient("150 g Pancetta", 2.0) == "300 g Pancetta"
+    assert _scale_ingredient("--- Hauptzutaten ---", 2.0) == "--- Hauptzutaten ---"
+    assert _scale_ingredient("Salz und Pfeffer", 2.0) == "Salz und Pfeffer"
+
+
+@pytest.mark.asyncio
+async def test_add_to_shopping_list_scaled(mock_hass, mock_config_entry):
+    """Test add_to_shopping_list service with servings scaling."""
+    from custom_components.chefkoch_ha import async_setup_entry
+
+    mock_state = MagicMock()
+    mock_state.attributes = {
+        "ingredients": ["400 g Spaghetti", "150 g Pancetta"],
+        "servings": "4 Port.",
+    }
+    mock_hass.states.get.return_value = mock_state
+    mock_hass.services.async_call = AsyncMock()
+
+    await async_setup_entry(mock_hass, mock_config_entry)
+
+    # Find the registered add_to_shopping_list handler
+    handler = None
+    for call in mock_hass.services.async_register.call_args_list:
+        if call[0][1] == "add_to_shopping_list":
+            handler = call[0][2]
+            break
+
+    assert handler is not None
+
+    service_call = MagicMock()
+    service_call.data = {"entity_id": "sensor.chefkoch_test", "servings": 2}
+    await handler(service_call)
+
+    assert mock_hass.services.async_call.call_count == 2
+    mock_hass.services.async_call.assert_any_call(
+        "shopping_list", "add_item", {"name": "200 g Spaghetti"}
+    )
+    mock_hass.services.async_call.assert_any_call(
+        "shopping_list", "add_item", {"name": "75 g Pancetta"}
+    )

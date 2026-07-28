@@ -134,6 +134,7 @@ Adds all ingredients from a specific Chefkoch sensor to the Home Assistant shopp
 | Field | Description |
 | :--- | :--- |
 | `entity_id` | (Required) The entity ID of the Chefkoch sensor (e.g., `sensor.chefkoch_daily_recipe`). |
+| `servings` | (Optional) Target number of servings to dynamically scale ingredient quantities (e.g., `2`). |
 
 ## Credits
 
