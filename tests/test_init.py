@@ -478,3 +478,67 @@ async def test_add_to_shopping_list_scaled(mock_hass, mock_config_entry):
     mock_hass.services.async_call.assert_any_call(
         "shopping_list", "add_item", {"name": "75 g Pancetta"}
     )
+
+
+@pytest.mark.asyncio
+async def test_generate_meal_plan(mock_hass, mock_config_entry):
+    """Test generate_meal_plan service fires event with meal plan entries."""
+    from custom_components.chefkoch_ha import async_setup_entry
+
+    api_response = {
+        "results": [
+            {
+                "recipe": {
+                    "id": "111111",
+                    "title": "Pasta Primavera",
+                    "isPlus": False,
+                }
+            }
+        ]
+    }
+    recipe_attrs = {
+        "title": "Pasta Primavera",
+        "status": "success",
+        "subtitle": "",
+        "url": "https://www.chefkoch.de/rezepte/111111/",
+        "ingredients": [],
+        "instructions": "",
+        "servings": "4",
+        "top_comments": [],
+    }
+    mock_api_resp = MagicMock()
+    mock_api_resp.status_code = 200
+    mock_api_resp.json.side_effect = [api_response, recipe_attrs]
+
+    await async_setup_entry(mock_hass, mock_config_entry)
+
+    # Find the registered generate_meal_plan handler
+    handler = None
+    for call in mock_hass.services.async_register.call_args_list:
+        if call[0][1] == "generate_meal_plan":
+            handler = call[0][2]
+            break
+
+    assert handler is not None
+
+    service_call = MagicMock()
+    service_call.data = {"days": 2, "query": "Pasta"}
+
+    with patch(
+        "custom_components.chefkoch_ha._fetch_recipe_url",
+        return_value="https://www.chefkoch.de/rezepte/111111/",
+    ):
+        with patch(
+            "custom_components.chefkoch_ha.fetch_recipe_attributes_from_api",
+            return_value=recipe_attrs,
+        ):
+            await handler(service_call)
+
+    assert mock_hass.bus.async_fire.called
+    event_name, event_data = mock_hass.bus.async_fire.call_args[0]
+    assert event_name == "chefkoch_meal_plan_generated"
+    assert event_data["days"] == 2
+    assert event_data["query"] == "Pasta"
+    assert len(event_data["meal_plan"]) == 2
+    assert event_data["meal_plan"][0]["day"] == "1"
+    assert event_data["meal_plan"][0]["title"] == "Pasta Primavera"

@@ -11,6 +11,7 @@ add_to_shopping_list:
       required: true
       selector:
         entity:
+          domain: sensor
     servings:
       name: Target Servings
       description: Optional target number of servings to dynamically scale ingredient quantities.
@@ -20,4 +21,23 @@ add_to_shopping_list:
           min: 1
           max: 50
           mode: box
-
+generate_meal_plan:
+  name: Generate Meal Plan
+  description: Generates a multi-day meal plan with recipe suggestions and fires a chefkoch_meal_plan_generated event.
+  fields:
+    days:
+      name: Number of Days
+      description: Number of days to generate suggestions for (1 to 7).
+      required: false
+      default: 7
+      selector:
+        number:
+          min: 1
+          max: 7
+          mode: slider
+    query:
+      name: Search Query
+      description: Optional search term or diet preference (e.g., 'Schnell', 'Vegetarisch', 'Pasta').
+      required: false
+      selector:
+        text:

@@ -29,6 +29,7 @@ The **Chefkoch** integration brings recipes from Germany's largest cooking platf
 - **Random Recipes**: Discover new meals with random recipe sensors (Standard, Vegan, Vegetarian, Baking).
 - **Custom Search**: Create sensors for specific queries (e.g., "Lasagne", "Vegan Burger").
 - **Rich Data**: Attributes include ingredients, instructions, preparation time, nutritional info (protein, fat, carbs), cuisine style, saved cookbook count (`saved_recipes_count`), view count (`view_count`), top user comments (`top_comments`), subtitle, tags, category path (`category_breadcrumb`), author notes (`author_notes`), video links/IDs, and images.
+- **Meal Plan**: Generate a multi-day recipe plan via the `chefkoch_ha.generate_meal_plan` service; results are fired as a `chefkoch_meal_plan_generated` event.
 - **No Flicker**: Sensors maintain their state during background updates or when adding new sensors.
 
 ## Installation 🛠️
@@ -135,6 +136,26 @@ Adds all ingredients from a specific Chefkoch sensor to the Home Assistant shopp
 | :--- | :--- |
 | `entity_id` | (Required) The entity ID of the Chefkoch sensor (e.g., `sensor.chefkoch_daily_recipe`). |
 | `servings` | (Optional) Target number of servings to dynamically scale ingredient quantities (e.g., `2`). |
+
+### `chefkoch_ha.generate_meal_plan`
+Generates a multi-day meal plan with recipe suggestions. Fires a `chefkoch_meal_plan_generated` event on the Home Assistant event bus with the results.
+
+| Field | Description |
+| :--- | :--- |
+| `days` | (Optional, 1–7) Number of days to generate recipes for. Defaults to `7`. |
+| `query` | (Optional) Search query or diet keyword (e.g., `Vegetarisch`, `Pasta`, `Schnell`). |
+
+**Event payload** (`chefkoch_meal_plan_generated`):
+```json
+{
+  "meal_plan": [
+    {"day": 1, "title": "Spaghetti Carbonara", "url": "https://www.chefkoch.de/rezepte/..."},
+    ...
+  ],
+  "days": 7,
+  "query": "Vegetarisch"
+}
+```
 
 ## Credits
 

@@ -805,9 +805,61 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             scale_factor,
         )
 
+    async def handle_generate_meal_plan(call):
+        """Generate a multi-day meal plan and fire an event with the results."""
+        days = int(call.data.get("days", 7))
+        query = call.data.get("query", "").strip() or "Rezept"
+        days = max(1, min(days, 7))
+
+        _LOGGER.debug(
+            "Service chefkoch_ha.generate_meal_plan called: days=%d, query=%s",
+            days,
+            query,
+        )
+
+        meal_plan: list[dict[str, str]] = []
+        sensor_cfg = {"search_query": query}
+
+        for day_index in range(days):
+            try:
+                url = await _fetch_recipe_url({"type": "search", **sensor_cfg})
+                if url:
+                    recipe_id = _get_id_from_url(url)
+                    title = ""
+                    if recipe_id:
+                        try:
+                            attrs = await asyncio.to_thread(
+                                fetch_recipe_attributes_from_api, recipe_id
+                            )
+                            title = attrs.get("title", "")
+                        except Exception:
+                            pass
+                    meal_plan.append(
+                        {
+                            "day": str(day_index + 1),
+                            "url": url,
+                            "title": title or url,
+                        }
+                    )
+            except Exception as err:
+                _LOGGER.warning(
+                    "Could not fetch recipe for day %d: %s", day_index + 1, err
+                )
+
+        hass.bus.async_fire(
+            "chefkoch_meal_plan_generated",
+            {"meal_plan": meal_plan, "days": days, "query": query},
+        )
+        _LOGGER.info(
+            "Meal plan generated: %d entries for query '%s'", len(meal_plan), query
+        )
+
     hass.services.async_register(DOMAIN, "refresh_recipe", handle_refresh_recipe)
     hass.services.async_register(
         DOMAIN, "add_to_shopping_list", handle_add_to_shopping_list
+    )
+    hass.services.async_register(
+        DOMAIN, "generate_meal_plan", handle_generate_meal_plan
     )
 
     entry.async_on_unload(entry.add_update_listener(options_update_listener))
