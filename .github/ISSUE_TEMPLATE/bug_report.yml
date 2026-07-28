@@ -18,7 +18,7 @@ body:
     attributes:
       label: Integration Version
       description: Which version of the Chefkoch integration are you using?
-      placeholder: e.g. v3.0.2-dev0
+      placeholder: e.g. v3.1.0-dev0
     validations:
       required: true
 
