@@ -127,11 +127,67 @@ async def _fetch_recipe_url(sensor_config: dict[str, Any]) -> str | None:
                     _LOGGER.debug("Error during Daily Plus check for %s: %s", url, e)
         return None, None
 
-    def _get_search_url(query, limit=20):
+    def _get_search_url(query_or_config, limit=20):
+        if isinstance(query_or_config, dict):
+            sensor_cfg = query_or_config
+            query = sensor_cfg.get("search_query", "").strip() or "Rezept"
+        else:
+            sensor_cfg = {"search_query": str(query_or_config)}
+            query = str(query_or_config)
+
+        # Try direct API search with parameters first
+        params: dict[str, str] = {"query": query, "limit": str(limit)}
+
+        prep_times = sensor_cfg.get("prep_times")
+        if prep_times and prep_times != "Alle":
+            try:
+                params["maxTime"] = str(int(prep_times))
+            except ValueError:
+                pass
+
+        ratings = sensor_cfg.get("ratings")
+        ratings_map = {"2": "2.0", "3": "3.0", "4": "4.0", "Top": "4.5"}
+        if ratings and ratings in ratings_map:
+            params["minimumRating"] = ratings_map[ratings]
+
+        sort = sensor_cfg.get("sort")
+        sort_map = {"Bewertung": "rating", "Neuheiten": "createdAt"}
+        if sort and sort in sort_map:
+            params["orderBy"] = sort_map[sort]
+
+        api_search_url = "https://api.chefkoch.de/v2/recipes"
+        headers = {"User-Agent": "Mozilla/5.0"}
+        try:
+            resp = requests.get(
+                api_search_url, params=params, headers=headers, timeout=5
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                results = data.get("results", [])
+                valid_recipes = []
+                for item in results:
+                    recipe = item.get("recipe", {})
+                    if recipe and not recipe.get("isPlus"):
+                        rid = recipe.get("id")
+                        if rid:
+                            valid_recipes.append(
+                                (
+                                    f"{CHEFKOCH_BASE_URL}{rid}/",
+                                    recipe.get("title", "Search Recipe"),
+                                )
+                            )
+
+                if valid_recipes:
+                    attempts = min(5, len(valid_recipes))
+                    choice = random.choice(valid_recipes[:attempts])
+                    return choice[0], choice[1]
+        except Exception as err:
+            _LOGGER.debug("API search failed (%s), falling back to Search()", err)
+
+        # Fallback to get_chefkoch Search()
         searcher = Search(query)
         recipes = searcher.recipes(limit=limit)
         if recipes:
-            # Try up to 5 random choices to find a non-Plus recipe
             attempts = min(5, len(recipes))
             sampled_recipes = random.sample(recipes, attempts)
 
@@ -142,15 +198,12 @@ async def _fetch_recipe_url(sensor_config: dict[str, Any]) -> str | None:
 
                 if recipe_id:
                     url = f"{CHEFKOCH_BASE_URL}{recipe_id}/"
-                    # Pre-check: Does it have JSON-LD? (Plus recipes usually don't)
                     try:
-                        headers = {"User-Agent": "Mozilla/5.0"}
                         resp = requests.get(url, headers=headers, timeout=5)
                         if (
                             resp.status_code == 200
                             and "application/ld+json" in resp.text
                         ):
-                            # Avoid triggering getMeta via .name property
                             recipe_name = "Search Recipe"
                             if hasattr(choice, "_gotMeta") and choice._gotMeta:
                                 recipe_name = getattr(choice, "name", recipe_name)
@@ -160,7 +213,6 @@ async def _fetch_recipe_url(sensor_config: dict[str, Any]) -> str | None:
                     except Exception as e:
                         _LOGGER.debug("Error during Plus check for %s: %s", url, e)
 
-            # Fallback to the first one if all checks fail (to avoid returning None)
             choice = recipes[0]
             recipe_id = _get_id_from_url(getattr(choice, "_url", ""))
             return f"{CHEFKOCH_BASE_URL}{recipe_id}/", "Search Recipe"
@@ -181,35 +233,38 @@ async def _fetch_recipe_url(sensor_config: dict[str, Any]) -> str | None:
                 )
 
             if not url:
-                url, name = await asyncio.to_thread(_get_search_url, "Rezept")
+                url, name = await asyncio.to_thread(_get_search_url, sensor_config)
 
             if url:
                 _LOGGER.debug("Daily/Fallback recipe: %s (URL: %s)", name, url)
             return url
 
         elif sensor_type == "random":
-            url, name = await asyncio.to_thread(_get_search_url, "Rezept", 100)
+            url, name = await asyncio.to_thread(_get_search_url, sensor_config, 100)
             if url:
                 _LOGGER.debug("Random recipe chosen: %s (URL: %s)", name, url)
             return url
 
         elif sensor_type == "vegan":
-            url, name = await asyncio.to_thread(_get_search_url, "vegan")
+            cfg = dict(sensor_config)
+            cfg["search_query"] = "vegan"
+            url, name = await asyncio.to_thread(_get_search_url, cfg)
             return url
 
         elif sensor_type == "vegetarian":
-            url, name = await asyncio.to_thread(_get_search_url, "vegetarisch")
+            cfg = dict(sensor_config)
+            cfg["search_query"] = "vegetarisch"
+            url, name = await asyncio.to_thread(_get_search_url, cfg)
             return url
 
         elif sensor_type == "baking":
-            url, name = await asyncio.to_thread(_get_search_url, "backen")
+            cfg = dict(sensor_config)
+            cfg["search_query"] = "backen"
+            url, name = await asyncio.to_thread(_get_search_url, cfg)
             return url
 
         elif sensor_type == "search":
-            search_query = sensor_config.get("search_query", "").strip()
-            if not search_query:
-                search_query = "Rezept"
-            url, name = await asyncio.to_thread(_get_search_url, search_query)
+            url, name = await asyncio.to_thread(_get_search_url, sensor_config)
             return url
 
         return None

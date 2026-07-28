@@ -226,6 +226,47 @@ def test_extract_recipe_attributes_api():
     assert "--- Hauptzutaten ---" in attributes["ingredients"]
 
 
+def test_fetch_recipe_url_api_filters():
+    """Test fetching recipe URL with API search filters (prep_times, ratings, sort)."""
+    sensor_config = {
+        "type": "search",
+        "search_query": "Pasta",
+        "prep_times": "30",
+        "ratings": "4",
+        "sort": "Bewertung",
+    }
+    api_response = {
+        "results": [
+            {
+                "recipe": {
+                    "id": "555555",
+                    "title": "Filtered Pasta",
+                    "isPlus": False,
+                }
+            }
+        ]
+    }
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.json.return_value = api_response
+
+    with patch("requests.get", return_value=mock_resp) as mock_get:
+        from custom_components.chefkoch_ha import _fetch_recipe_url
+
+        import asyncio
+
+        url = asyncio.run(_fetch_recipe_url(sensor_config))
+
+    assert url == "https://www.chefkoch.de/rezepte/555555/"
+    mock_get.assert_called_once()
+    _, kwargs = mock_get.call_args
+    params = kwargs.get("params", {})
+    assert params.get("query") == "Pasta"
+    assert params.get("maxTime") == "30"
+    assert params.get("minimumRating") == "4.0"
+    assert params.get("orderBy") == "rating"
+
+
 def test_extract_recipe_attributes_api_fallback_to_webscraping(caplog):
     """Test fallback to webscraping with warning log when API fails."""
     html_content = """
