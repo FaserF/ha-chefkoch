@@ -219,7 +219,7 @@ class ChefkochOptionsFlowHandler(config_entries.OptionsFlow):
                     self.suggestions = result.get("suggestions", [])
                     if self.suggestions:
                         return await self.async_step_add_sensor_suggestions()
-                except Exception as e:
+                except (requests.RequestException, AttributeError, ValueError, KeyError) as e:
                     _LOGGER.error("Error fetching suggestions: %s", e)
 
             return await self.async_step_add_sensor_form()
@@ -297,10 +297,7 @@ class ChefkochOptionsFlowHandler(config_entries.OptionsFlow):
 
         ratings_map_inv = {"2": "2", "3": "3", "4": "4", "5": "Top"}
         stored_rating = str(form_data.get("ratings", ""))
-        if stored_rating in ratings_map_inv:
-            form_data["ratings"] = ratings_map_inv[stored_rating]
-        else:
-            form_data["ratings"] = "Alle"
+        form_data["ratings"] = ratings_map_inv.get(stored_rating, "Alle")
 
         return self.async_show_form(
             step_id="edit_sensor_form",

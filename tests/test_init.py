@@ -353,9 +353,11 @@ async def test_fetch_recipe_url_daily():
     mock_response.status_code = 200
     mock_response.text = "application/ld+json"
 
-    with patch("custom_components.chefkoch_ha.Search", return_value=mock_searcher):
-        with patch("requests.get", return_value=mock_response):
-            url = await _fetch_recipe_url({"type": "daily"})
+    with (
+        patch("custom_components.chefkoch_ha.Search", return_value=mock_searcher),
+        patch("requests.get", return_value=mock_response),
+    ):
+        url = await _fetch_recipe_url({"type": "daily"})
 
     assert url == "https://www.chefkoch.de/rezepte/123456/"
 
@@ -374,10 +376,12 @@ async def test_fetch_recipe_url_random():
     mock_response.status_code = 200
     mock_response.text = "application/ld+json"
 
-    with patch("custom_components.chefkoch_ha.Search", return_value=mock_searcher):
-        with patch("requests.get", return_value=mock_response):
-            with patch("random.sample", return_value=[mock_recipe]):
-                url = await _fetch_recipe_url({"type": "random"})
+    with (
+        patch("custom_components.chefkoch_ha.Search", return_value=mock_searcher),
+        patch("requests.get", return_value=mock_response),
+        patch("random.sample", return_value=[mock_recipe]),
+    ):
+        url = await _fetch_recipe_url({"type": "random"})
 
     assert url == "https://www.chefkoch.de/rezepte/789/"
 
@@ -408,12 +412,14 @@ async def test_fetch_recipe_url_plus_skip():
             resp.text = "application/ld+json"
         return resp
 
-    with patch("custom_components.chefkoch_ha.Search", return_value=mock_searcher):
-        with patch("requests.get", side_effect=mock_get):
-            with patch("random.sample", return_value=[recipe_plus, recipe_ok]):
-                url = await _fetch_recipe_url(
-                    {"type": "search", "search_query": "test"}
-                )
+    with (
+        patch("custom_components.chefkoch_ha.Search", return_value=mock_searcher),
+        patch("requests.get", side_effect=mock_get),
+        patch("random.sample", return_value=[recipe_plus, recipe_ok]),
+    ):
+        url = await _fetch_recipe_url(
+            {"type": "search", "search_query": "test"}
+        )
 
     assert url == "https://www.chefkoch.de/rezepte/2/"
 

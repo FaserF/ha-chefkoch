@@ -66,11 +66,9 @@ async def async_update_data(hass: HomeAssistant, entry: ConfigEntry) -> dict[str
                         "error_message": "No matching recipe found.",
                     }
         except Exception as e:
-            _LOGGER.error(
-                "Error during data fetching for sensor %s: %s",
+            _LOGGER.exception(
+                "Error during data fetching for sensor %s",
                 sensor_name,
-                e,
-                exc_info=True,
             )
             # Only set error state if we don't have old data
             if sensor_id not in data:
@@ -123,7 +121,7 @@ async def _fetch_recipe_url(sensor_config: dict[str, Any]) -> str | None:
                         return url, recipe_name
                     else:
                         _LOGGER.debug("Daily recipe is Plus or invalid: %s", url)
-                except Exception as e:
+                except (requests.RequestException, ValueError) as e:
                     _LOGGER.debug("Error during Daily Plus check for %s: %s", url, e)
         return None, None
 
@@ -181,7 +179,7 @@ async def _fetch_recipe_url(sensor_config: dict[str, Any]) -> str | None:
                     attempts = min(5, len(valid_recipes))
                     choice = random.choice(valid_recipes[:attempts])
                     return choice[0], choice[1]
-        except Exception as err:
+        except (requests.RequestException, ValueError, TypeError) as err:
             _LOGGER.debug("API search failed (%s), falling back to Search()", err)
 
         # Fallback to get_chefkoch Search()
@@ -210,7 +208,7 @@ async def _fetch_recipe_url(sensor_config: dict[str, Any]) -> str | None:
                             return url, recipe_name
                         else:
                             _LOGGER.debug("Skipping Plus or invalid recipe: %s", url)
-                    except Exception as e:
+                    except (requests.RequestException, ValueError) as e:
                         _LOGGER.debug("Error during Plus check for %s: %s", url, e)
 
             choice = recipes[0]
@@ -227,7 +225,7 @@ async def _fetch_recipe_url(sensor_config: dict[str, Any]) -> str | None:
         if sensor_type == "daily":
             try:
                 url, name = await asyncio.to_thread(_get_daily_url)
-            except Exception as daily_err:
+            except (requests.RequestException, AttributeError, ValueError, TypeError) as daily_err:
                 _LOGGER.warning(
                     "Daily recipe fetch failed: %s. Falling back to random.", daily_err
                 )
@@ -270,11 +268,9 @@ async def _fetch_recipe_url(sensor_config: dict[str, Any]) -> str | None:
         return None
 
     except Exception as e:
-        _LOGGER.error(
-            "Exception during recipe URL fetch for sensor type %s: %s",
+        _LOGGER.exception(
+            "Exception during recipe URL fetch for sensor type %s",
             sensor_type,
-            e,
-            exc_info=True,
         )
         return None
 
@@ -294,7 +290,7 @@ def _parse_duration(duration_str):
         m = int(minutes) if minutes else 0
         s = int(seconds) if seconds else 0
         return str(timedelta(hours=h, minutes=m, seconds=s))
-    except Exception:
+    except (ValueError, TypeError, OverflowError):
         return ""
 
 
@@ -339,7 +335,7 @@ def fetch_recipe_comments_from_api(recipe_id: str, limit: int = 5) -> list[str]:
                     if text:
                         comments.append(f"{author}: {text}" if author else text)
             return comments
-    except Exception as err:
+    except (requests.RequestException, ValueError, KeyError) as err:
         _LOGGER.debug("Failed to fetch comments for recipe %s: %s", recipe_id, err)
     return []
 
@@ -524,7 +520,7 @@ def extract_recipe_attributes_webscraping(recipe_url: str) -> dict[str, Any]:
                 if recipe:
                     raw = recipe
                     break
-            except Exception:
+            except (json.JSONDecodeError, TypeError):
                 continue
 
         if not raw:
@@ -681,7 +677,7 @@ def extract_recipe_attributes_webscraping(recipe_url: str) -> dict[str, Any]:
         return attributes
 
     except Exception as e:
-        _LOGGER.error("Failed to parse recipe %s: %s", recipe_url, e, exc_info=True)
+        _LOGGER.exception("Failed to parse recipe %s", recipe_url)
         return {
             "title": "Error loading recipe",
             "url": recipe_url,
@@ -696,7 +692,7 @@ def extract_recipe_attributes(recipe_url: str) -> dict[str, Any]:
     if recipe_id:
         try:
             return fetch_recipe_attributes_from_api(recipe_id)
-        except Exception as err:
+        except (requests.RequestException, KeyError, ValueError) as err:
             _LOGGER.warning(
                 "Chefkoch API request failed or returned empty data for %s (%s). Falling back to less efficient webscraping.",
                 recipe_url,
@@ -832,8 +828,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                                 fetch_recipe_attributes_from_api, recipe_id
                             )
                             title = attrs.get("title", "")
-                        except Exception:
-                            pass
+                        except (requests.RequestException, KeyError, ValueError) as fetch_err:
+                            _LOGGER.debug(
+                                "Failed to fetch recipe title for day %d: %s",
+                                day_index + 1,
+                                fetch_err,
+                            )
                     meal_plan.append(
                         {
                             "day": str(day_index + 1),
@@ -841,7 +841,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                             "title": title or url,
                         }
                     )
-            except Exception as err:
+            except (requests.RequestException, KeyError, ValueError) as err:
                 _LOGGER.warning(
                     "Could not fetch recipe for day %d: %s", day_index + 1, err
                 )
@@ -876,8 +876,7 @@ async def options_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> No
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     unload_ok = await hass.config_entries.async_unload_platforms(entry, ["sensor"])
-    if unload_ok:
+    if unload_ok and entry.entry_id in hass.data[DOMAIN]:
         # We keep the cache_ entry in hass.data[DOMAIN] to survive the reload flicker
-        if entry.entry_id in hass.data[DOMAIN]:
-            hass.data[DOMAIN].pop(entry.entry_id)
+        hass.data[DOMAIN].pop(entry.entry_id)
     return unload_ok
