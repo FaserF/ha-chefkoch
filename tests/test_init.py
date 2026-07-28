@@ -103,6 +103,46 @@ def test_extract_recipe_attributes():
     assert attributes["protein"] == "20 g"
 
 
+def test_extract_recipe_attributes_graph():
+    """Test extracting attributes when JSON-LD is wrapped in @graph."""
+    html_content = """
+    <html>
+    <head>
+    <meta property="og:image" content="https://img.chefkoch-cdn.de/test.jpg">
+    </head>
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@graph": [
+            {
+                "@type": "Recipe",
+                "name": "Graph Recipe von AuthorName",
+                "recipeInstructions": [
+                    {"@type": "HowToStep", "text": "Mix ingredients"}
+                ],
+                "aggregateRating": {"ratingValue": 4.8, "ratingCount": 20}
+            }
+        ]
+    }
+    </script>
+    </html>
+    """
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.text = html_content
+    mock_response.raise_for_status = MagicMock()
+
+    with patch("requests.get", return_value=mock_response):
+        attributes = extract_recipe_attributes("http://test")
+
+    assert attributes["title"] == "Graph Recipe"
+    assert attributes["author"] == "AuthorName"
+    assert attributes["status"] == "success"
+    assert "Mix ingredients" in attributes["instructions"]
+    assert attributes["image_url"] == "https://img.chefkoch-cdn.de/test.jpg"
+
+
+
 def test_extract_recipe_attributes_error():
     """Test extracting attributes when fetch fails."""
     with patch("requests.get", side_effect=Exception("Failed")):

@@ -242,6 +242,24 @@ def _parse_duration(duration_str):
         return ""
 
 
+def _find_recipe_in_json(data: Any) -> dict[str, Any] | None:
+    """Recursively search JSON-LD structure for a Recipe object."""
+    if isinstance(data, dict):
+        if data.get("@type") == "Recipe":
+            return data
+        if isinstance(data.get("@graph"), list):
+            for item in data["@graph"]:
+                found = _find_recipe_in_json(item)
+                if found:
+                    return found
+    elif isinstance(data, list):
+        for item in data:
+            found = _find_recipe_in_json(item)
+            if found:
+                return found
+    return None
+
+
 def extract_recipe_attributes(recipe_url: str) -> dict[str, Any]:
     """Extract all attributes from a recipe URL using manual parsing as fallback for get_chefkoch."""
     try:
@@ -256,19 +274,16 @@ def extract_recipe_attributes(recipe_url: str) -> dict[str, Any]:
         # Find JSON-LD
         scripts = soup.find_all("script", type="application/ld+json")
         raw = {}
+        all_json_data = []
         for script in scripts:
             try:
                 if not script.string:
                     continue
                 data = json.loads(script.string)
-                # Some scripts are lists, some are objects
-                if isinstance(data, list):
-                    for item in data:
-                        if item.get("@type") == "Recipe":
-                            raw = item
-                            break
-                elif data.get("@type") == "Recipe":
-                    raw = data
+                all_json_data.append(data)
+                recipe = _find_recipe_in_json(data)
+                if recipe:
+                    raw = recipe
                     break
             except Exception:
                 continue
@@ -286,7 +301,8 @@ def extract_recipe_attributes(recipe_url: str) -> dict[str, Any]:
             val = raw.get(key)
             return val if val is not None else default
 
-        name = safe("name", "Unknown Recipe")
+        raw_name = safe("name", "Unknown Recipe")
+        name = raw_name
         if " von " in name:
             name = name.split(" von ")[0].strip()
 
@@ -305,6 +321,9 @@ def extract_recipe_attributes(recipe_url: str) -> dict[str, Any]:
             author = (
                 author_raw[0].get("name", "") if isinstance(author_raw[0], dict) else ""
             )
+
+        if not author and " von " in raw_name:
+            author = raw_name.split(" von ")[-1].strip()
 
         # Nutrition
         nutrition = safe("nutrition", {})
@@ -327,9 +346,20 @@ def extract_recipe_attributes(recipe_url: str) -> dict[str, Any]:
         images = safe("image", [])
         image_url = ""
         if isinstance(images, list) and images:
-            image_url = images[0]
+            first_img = images[0]
+            if isinstance(first_img, dict):
+                image_url = first_img.get("url") or first_img.get("contentUrl", "")
+            elif isinstance(first_img, str):
+                image_url = first_img
         elif isinstance(images, str):
             image_url = images
+        elif isinstance(images, dict):
+            image_url = images.get("url") or images.get("contentUrl", "")
+
+        if not image_url or not image_url.startswith("http"):
+            og_image = soup.find("meta", property="og:image")
+            if og_image and og_image.get("content"):
+                image_url = str(og_image["content"])
 
         # Instructions: can be a string, a list of strings, a list of HowToStep objects, or HowToSection objects
         instructions_raw = safe("recipeInstructions", "")

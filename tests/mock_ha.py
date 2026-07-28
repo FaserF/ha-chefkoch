@@ -104,18 +104,45 @@ def setup_mocks():
     sys.modules["homeassistant.config_entries"] = ha_config_entries
     ha.config_entries = ha_config_entries
 
+    ha_util = types.ModuleType("homeassistant.util")
+    sys.modules["homeassistant.util"] = ha_util
+    ha.util = ha_util
+
+    ha_util_logging = types.ModuleType("homeassistant.util.logging")
+    ha_util_logging.log_exception = MagicMock()
+    sys.modules["homeassistant.util.logging"] = ha_util_logging
+    ha_util.logging = ha_util_logging
+
     # Mock other helpers
-    sys.modules["homeassistant.helpers"] = MagicMock()
-    sys.modules["homeassistant.helpers.update_coordinator"] = MagicMock()
-    sys.modules[
-        "homeassistant.helpers.update_coordinator"
-    ].CoordinatorEntity = MockCoordinatorEntity
-    sys.modules["homeassistant.helpers.device_registry"] = MagicMock()
-    sys.modules["homeassistant.helpers.config_validation"] = MagicMock()
-    sys.modules["homeassistant.components"] = MagicMock()
-    sys.modules["homeassistant.components.sensor"] = MagicMock()
-    sys.modules["homeassistant.components.sensor"].SensorEntity = MockEntity
-    sys.modules["homeassistant.components.diagnostics"] = MagicMock()
+    ha_helpers = MagicMock()
+    sys.modules["homeassistant.helpers"] = ha_helpers
+    ha.helpers = ha_helpers
+
+    ha_helpers_uc = MagicMock()
+    ha_helpers_uc.CoordinatorEntity = MockCoordinatorEntity
+    sys.modules["homeassistant.helpers.update_coordinator"] = ha_helpers_uc
+    ha_helpers.update_coordinator = ha_helpers_uc
+
+    ha_helpers_dr = MagicMock()
+    sys.modules["homeassistant.helpers.device_registry"] = ha_helpers_dr
+    ha_helpers.device_registry = ha_helpers_dr
+
+    ha_helpers_cv = MagicMock()
+    sys.modules["homeassistant.helpers.config_validation"] = ha_helpers_cv
+    ha_helpers.config_validation = ha_helpers_cv
+
+    ha_components = MagicMock()
+    sys.modules["homeassistant.components"] = ha_components
+    ha.components = ha_components
+
+    ha_comp_sensor = MagicMock()
+    ha_comp_sensor.SensorEntity = MockEntity
+    sys.modules["homeassistant.components.sensor"] = ha_comp_sensor
+    ha_components.sensor = ha_comp_sensor
+
+    ha_comp_diag = MagicMock()
+    sys.modules["homeassistant.components.diagnostics"] = ha_comp_diag
+    ha_components.diagnostics = ha_comp_diag
 
     # Voluptuous
     import voluptuous as vol
