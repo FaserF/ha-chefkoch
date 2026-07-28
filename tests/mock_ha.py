@@ -113,6 +113,25 @@ def setup_mocks():
     sys.modules["homeassistant.util.logging"] = ha_util_logging
     ha_util.logging = ha_util_logging
 
+    class MockDataUpdateCoordinator:
+        def __init__(
+            self, hass, logger, *, name, update_method=None, update_interval=None
+        ):
+            self.hass = hass
+            self.logger = logger
+            self.name = name
+            self.update_method = update_method
+            self.update_interval = update_interval
+            self.data = {}
+
+        async def async_config_entry_first_refresh(self):
+            if self.update_method:
+                self.data = await self.update_method()
+
+        async def async_refresh(self):
+            if self.update_method:
+                self.data = await self.update_method()
+
     # Mock other helpers
     ha_helpers = MagicMock()
     sys.modules["homeassistant.helpers"] = ha_helpers
@@ -120,8 +139,9 @@ def setup_mocks():
 
     ha_helpers_uc = MagicMock()
     ha_helpers_uc.CoordinatorEntity = MockCoordinatorEntity
+    ha_helpers_uc.DataUpdateCoordinator = MockDataUpdateCoordinator
     sys.modules["homeassistant.helpers.update_coordinator"] = ha_helpers_uc
-    ha_helpers.update_coordinator = ha_helpers_uc
+    ha.helpers.update_coordinator = ha_helpers_uc
 
     ha_helpers_dr = MagicMock()
     sys.modules["homeassistant.helpers.device_registry"] = ha_helpers_dr

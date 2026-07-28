@@ -11,7 +11,7 @@ from . import mock_ha  # noqa: F401
 
 importlib.reload(custom_components.chefkoch_ha.config_flow)
 
-from custom_components.chefkoch_ha.config_flow import (
+from custom_components.chefkoch_ha.config_flow import (  # noqa: E402
     ChefkochConfigFlow,
     ChefkochOptionsFlowHandler,
 )

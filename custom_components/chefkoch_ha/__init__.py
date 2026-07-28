@@ -696,7 +696,7 @@ def extract_recipe_attributes(recipe_url: str) -> dict[str, Any]:
     if recipe_id:
         try:
             return fetch_recipe_attributes_from_api(recipe_id)
-        except (requests.RequestException, KeyError, ValueError) as err:
+        except Exception as err:  # noqa: BLE001
             _LOGGER.warning(
                 "Chefkoch API request failed or returned empty data for %s (%s). Falling back to less efficient webscraping.",
                 recipe_url,
