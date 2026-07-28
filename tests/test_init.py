@@ -180,6 +180,16 @@ def test_extract_recipe_attributes_api():
                 ],
             }
         ],
+        "subtitle": "Klassiker aus Italien",
+        "savedRecipesCount": 116412,
+        "viewCount": 3965603,
+        "miscellaneousText": "Super lecker mit etwas Knoblauch!",
+        "recipeVideoId": "597",
+        "tags": ["Pasta", "Italien", "Schnell"],
+        "categoryBreadcrumb": [
+            {"id": "61", "title": "Zubereitungsarten"},
+            {"id": "164", "title": "Kochen"},
+        ],
         "owner": {"displayName": "ChefMaster", "username": "chef_master_99"},
         "siteUrl": "https://www.chefkoch.de/rezepte/123456/carbonara.html",
     }
@@ -194,6 +204,13 @@ def test_extract_recipe_attributes_api():
         )
 
     assert attributes["title"] == "API Spaghetti Carbonara"
+    assert attributes["subtitle"] == "Klassiker aus Italien"
+    assert attributes["saved_recipes_count"] == 116412
+    assert attributes["view_count"] == 3965603
+    assert attributes["author_notes"] == "Super lecker mit etwas Knoblauch!"
+    assert attributes["video_id"] == "597"
+    assert "Pasta" in attributes["tags"]
+    assert "Kochen" in attributes["category_breadcrumb"]
     assert attributes["status"] == "success"
     assert attributes["author"] == "ChefMaster"
     assert attributes["cuisine"] == "Italien"

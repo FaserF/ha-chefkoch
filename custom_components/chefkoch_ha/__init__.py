@@ -368,8 +368,15 @@ def fetch_recipe_attributes_from_api(recipe_id: str) -> dict[str, Any]:
     tags = data.get("tags", [])
     keywords = ", ".join(tags) if isinstance(tags, list) else str(tags) if tags else ""
 
+    breadcrumb_items = [
+        b.get("title")
+        for b in data.get("categoryBreadcrumb", [])
+        if isinstance(b, dict) and b.get("title")
+    ]
+
     attributes: dict[str, Any] = {
         "title": title,
+        "subtitle": data.get("subtitle", ""),
         "url": data.get("siteUrl") or f"{CHEFKOCH_BASE_URL}{recipe_id}/",
         "image_url": image_url,
         "calories": calories,
@@ -378,14 +385,20 @@ def fetch_recipe_attributes_from_api(recipe_id: str) -> dict[str, Any]:
         "carbohydrates": carbohydrates,
         "cuisine": data.get("recipeCuisine", ""),
         "video_url": "",
+        "video_id": str(data.get("recipeVideoId")) if data.get("recipeVideoId") else "",
         "difficulty": difficulty,
         "ingredients": ingredients,
         "instructions": data.get("instructions", ""),
         "category": "",
+        "category_breadcrumb": breadcrumb_items,
         "servings": str(servings),
         "author": author,
+        "author_notes": data.get("miscellaneousText", "").strip(),
         "publisher": "Chefkoch",
         "keywords": keywords,
+        "tags": tags if isinstance(tags, list) else [],
+        "saved_recipes_count": data.get("savedRecipesCount"),
+        "view_count": data.get("viewCount"),
         "date_published": str(data.get("createdAt", "")),
         "status": "success",
         "totalTime": total_time,
@@ -531,8 +544,12 @@ def extract_recipe_attributes_webscraping(recipe_url: str) -> dict[str, Any]:
         process_instructions(instructions_raw)
         instructions = "\n".join(instructions_list)
 
+        kw = safe("keywords", "")
+        tags_list = [k.strip() for k in kw.split(",") if k.strip()] if kw else []
+
         attributes: dict[str, Any] = {
             "title": name,
+            "subtitle": "",
             "url": recipe_url,
             "image_url": image_url,
             "calories": calories,
@@ -547,16 +564,22 @@ def extract_recipe_attributes_webscraping(recipe_url: str) -> dict[str, Any]:
                 if isinstance(safe("video"), dict)
                 else ""
             ),
+            "video_id": "",
             "difficulty": safe("difficulty", ""),
             "ingredients": ingredients,
             "instructions": instructions,
             "category": safe("recipeCategory", ""),
+            "category_breadcrumb": [],
             "servings": safe("recipeYield", ""),
             "author": author,
+            "author_notes": "",
             "publisher": safe("publisher", {}).get("name", "")
             if isinstance(safe("publisher"), dict)
             else "",
-            "keywords": safe("keywords", ""),
+            "keywords": kw,
+            "tags": tags_list,
+            "saved_recipes_count": None,
+            "view_count": None,
             "date_published": str(safe("datePublished", "")),
             "status": "success",
             "totalTime": _parse_duration(safe("totalTime")),

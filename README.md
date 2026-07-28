@@ -28,7 +28,7 @@ The **Chefkoch** integration brings recipes from Germany's largest cooking platf
 - **Plus-Filter**: Automatically filters out "Chefkoch Plus" recipes that are behind a paywall.
 - **Random Recipes**: Discover new meals with random recipe sensors (Standard, Vegan, Vegetarian, Baking).
 - **Custom Search**: Create sensors for specific queries (e.g., "Lasagne", "Vegan Burger").
-- **Rich Data**: Attributes include ingredients, instructions, preparation time, nutritional info (protein, fat, carbs), cuisine style, video links, and images.
+- **Rich Data**: Attributes include ingredients, instructions, preparation time, nutritional info (protein, fat, carbs), cuisine style, saved cookbook count (`saved_recipes_count`), view count (`view_count`), subtitle, tags, category path (`category_breadcrumb`), author notes (`author_notes`), video links/IDs, and images.
 - **No Flicker**: Sensors maintain their state during background updates or when adding new sensors.
 
 ## Installation 🛠️
