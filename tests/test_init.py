@@ -142,6 +142,107 @@ def test_extract_recipe_attributes_graph():
     assert attributes["image_url"] == "https://img.chefkoch-cdn.de/test.jpg"
 
 
+def test_extract_recipe_attributes_api():
+    """Test extracting attributes via API using realistic live API JSON format."""
+    api_json = {
+        "title": "API Spaghetti Carbonara",
+        "instructions": "Cook pasta and mix with sauce.",
+        "servings": 4,
+        "preparationTime": 15,
+        "cookingTime": 10,
+        "totalTime": 25,
+        "difficulty": 1,
+        "recipeCuisine": "Italien",
+        "previewImageUrlTemplate": "https://img.chefkoch-cdn.de/rezepte/123456/bilder/99999/<format>/carbonara.jpg",
+        "nutrition": {
+            "kCalories": 582,
+            "proteinContent": 27.67,
+            "fatContent": 20.45,
+            "carbohydrateContent": 71.14,
+        },
+        "rating": {"rating": 4.9, "numVotes": 150},
+        "ingredientGroups": [
+            {
+                "header": "Hauptzutaten",
+                "ingredients": [
+                    {
+                        "amount": 400,
+                        "unit": "g",
+                        "name": "Spaghetti",
+                        "usageInfo": "oder Tortellini",
+                    },
+                    {
+                        "amount": 150,
+                        "unit": "g",
+                        "name": "Pancetta",
+                        "usageInfo": ", roher",
+                    },
+                ],
+            }
+        ],
+        "owner": {"displayName": "ChefMaster", "username": "chef_master_99"},
+        "siteUrl": "https://www.chefkoch.de/rezepte/123456/carbonara.html",
+    }
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = api_json
+    mock_response.raise_for_status = MagicMock()
+
+    with patch("requests.get", return_value=mock_response):
+        attributes = extract_recipe_attributes(
+            "https://www.chefkoch.de/rezepte/123456/carbonara.html"
+        )
+
+    assert attributes["title"] == "API Spaghetti Carbonara"
+    assert attributes["status"] == "success"
+    assert attributes["author"] == "ChefMaster"
+    assert attributes["cuisine"] == "Italien"
+    assert attributes["difficulty"] == "einfach"
+    assert attributes["calories"] == "582 kcal"
+    assert attributes["protein"] == "27.67 g"
+    assert (
+        attributes["image_url"]
+        == "https://img.chefkoch-cdn.de/rezepte/123456/bilder/99999/crop-900x600/carbonara.jpg"
+    )
+    assert "400 g Spaghetti (oder Tortellini)" in attributes["ingredients"]
+    assert "150 g Pancetta (roher)" in attributes["ingredients"]
+    assert "--- Hauptzutaten ---" in attributes["ingredients"]
+
+
+def test_extract_recipe_attributes_api_fallback_to_webscraping(caplog):
+    """Test fallback to webscraping with warning log when API fails."""
+    html_content = """
+    <html>
+    <script type="application/ld+json">
+    {
+        "@type": "Recipe",
+        "name": "Fallback Recipe von Web",
+        "recipeInstructions": ["Mix well"]
+    }
+    </script>
+    </html>
+    """
+
+    def mock_get(url, **kwargs):
+        resp = MagicMock()
+        if "api.chefkoch.de" in url:
+            resp.status_code = 500
+            resp.raise_for_status.side_effect = Exception("API Server Error 500")
+        else:
+            resp.status_code = 200
+            resp.text = html_content
+            resp.raise_for_status = MagicMock()
+        return resp
+
+    with patch("requests.get", side_effect=mock_get):
+        attributes = extract_recipe_attributes(
+            "https://www.chefkoch.de/rezepte/123456/fallback.html"
+        )
+
+    assert attributes["title"] == "Fallback Recipe"
+    assert attributes["status"] == "success"
+    assert "Falling back to less efficient webscraping" in caplog.text
+
 
 def test_extract_recipe_attributes_error():
     """Test extracting attributes when fetch fails."""

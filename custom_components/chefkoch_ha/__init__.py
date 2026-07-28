@@ -85,19 +85,20 @@ async def async_update_data(hass: HomeAssistant, entry: ConfigEntry) -> dict[str
     return data
 
 
+def _get_id_from_url(url: str | None) -> str | None:
+    """Extract recipe ID from URL manually."""
+    if not url:
+        return None
+    parts = url.split("/")
+    for part in parts:
+        if part.isdigit() and len(part) > 5:
+            return part
+    return None
+
+
 async def _fetch_recipe_url(sensor_config: dict[str, Any]) -> str | None:
     """Fetch the recipe URL based on sensor config using get_chefkoch."""
     sensor_type = sensor_config["type"]
-
-    def _get_id_from_url(url):
-        """Extract recipe ID from URL manually."""
-        if not url:
-            return None
-        parts = url.split("/")
-        for part in parts:
-            if part.isdigit() and len(part) > 5:
-                return part
-        return None
 
     def _get_daily_url():
         searcher = Search()
@@ -260,8 +261,147 @@ def _find_recipe_in_json(data: Any) -> dict[str, Any] | None:
     return None
 
 
-def extract_recipe_attributes(recipe_url: str) -> dict[str, Any]:
-    """Extract all attributes from a recipe URL using manual parsing as fallback for get_chefkoch."""
+def fetch_recipe_attributes_from_api(recipe_id: str) -> dict[str, Any]:
+    """Fetch recipe attributes directly from Chefkoch v2 API."""
+    api_url = f"https://api.chefkoch.de/v2/recipes/{recipe_id}"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
+    response = requests.get(api_url, headers=headers, timeout=10)
+    response.raise_for_status()
+    data = response.json()
+
+    if not data or not isinstance(data, dict) or not data.get("title"):
+        raise ValueError("API response is empty or missing required title field")
+
+    title = data.get("title", "")
+
+    # Extract ingredients from ingredientGroups
+    ingredients = []
+    for group in data.get("ingredientGroups", []):
+        header = group.get("header", "").strip()
+        if header:
+            ingredients.append(f"--- {header} ---")
+        for ing in group.get("ingredients", []):
+            amount = ing.get("amount")
+            unit = ing.get("unit", "").strip()
+            name = ing.get("name", "").strip()
+            usage_info = ing.get("usageInfo", "").strip().lstrip(",").strip()
+
+            amount_str = ""
+            if isinstance(amount, (int, float)) and amount > 0:
+                amount_str = f"{amount:g}"
+
+            name_with_usage = f"{name} ({usage_info})" if usage_info else name
+            parts = [p for p in [amount_str, unit, name_with_usage] if p]
+            if parts:
+                ingredients.append(" ".join(parts))
+
+    # Image URL: use previewImageUrlTemplate if available, replacing <format> with crop-900x600
+    image_url = ""
+    template = data.get("previewImageUrlTemplate")
+    if template and isinstance(template, str):
+        image_url = template.replace("<format>", "crop-900x600")
+    elif data.get("previewImageId"):
+        preview_img_id = data.get("previewImageId")
+        image_url = f"https://img.chefkochcdn.de/rezepte/{recipe_id}/bilder/{preview_img_id}/crop-900x600/rezept.jpg"
+
+    # Nutrition
+    nutrition = data.get("nutrition", {})
+    calories = ""
+    protein = ""
+    fat = ""
+    carbohydrates = ""
+    if isinstance(nutrition, dict):
+        if nutrition.get("kCalories") is not None:
+            calories = f"{nutrition.get('kCalories')} kcal"
+        if nutrition.get("proteinContent") is not None:
+            protein = f"{nutrition.get('proteinContent')} g"
+        if nutrition.get("fatContent") is not None:
+            fat = f"{nutrition.get('fatContent')} g"
+        if nutrition.get("carbohydrateContent") is not None:
+            carbohydrates = f"{nutrition.get('carbohydrateContent')} g"
+    elif data.get("kCalories") is not None:
+        calories = f"{data.get('kCalories')} kcal"
+
+    # Rating
+    rating_data = data.get("rating", {})
+    rating_val = None
+    rating_count = None
+    if isinstance(rating_data, dict):
+        rating_val = rating_data.get("rating")
+        rating_count = rating_data.get("numVotes")
+    elif isinstance(rating_data, (int, float)):
+        rating_val = rating_data
+
+    # Owner/Author
+    owner = data.get("owner", {})
+    author = ""
+    if isinstance(owner, dict):
+        author = owner.get("displayName") or owner.get("username") or ""
+
+    # Times
+    def parse_api_time(mins):
+        if mins is None or mins == "" or mins == 0:
+            return ""
+        try:
+            m = int(mins)
+            return str(timedelta(minutes=m))
+        except (ValueError, TypeError):
+            return str(mins)
+
+    prep_time = parse_api_time(data.get("preparationTime"))
+    cook_time = parse_api_time(data.get("cookingTime"))
+    rest_time = parse_api_time(data.get("restingTime"))
+    total_time = parse_api_time(data.get("totalTime"))
+
+    # Difficulty mapping
+    diff_raw = data.get("difficulty")
+    diff_map: dict[Any, str] = {1: "einfach", 2: "normal", 3: "pfiffig"}
+    difficulty = diff_map.get(diff_raw, str(diff_raw) if diff_raw is not None else "")
+
+    # Servings
+    servings = data.get("servings", "")
+    if servings:
+        servings = f"{servings} Port."
+
+    tags = data.get("tags", [])
+    keywords = ", ".join(tags) if isinstance(tags, list) else str(tags) if tags else ""
+
+    attributes: dict[str, Any] = {
+        "title": title,
+        "url": data.get("siteUrl") or f"{CHEFKOCH_BASE_URL}{recipe_id}/",
+        "image_url": image_url,
+        "calories": calories,
+        "protein": protein,
+        "fat": fat,
+        "carbohydrates": carbohydrates,
+        "cuisine": data.get("recipeCuisine", ""),
+        "video_url": "",
+        "difficulty": difficulty,
+        "ingredients": ingredients,
+        "instructions": data.get("instructions", ""),
+        "category": "",
+        "servings": str(servings),
+        "author": author,
+        "publisher": "Chefkoch",
+        "keywords": keywords,
+        "date_published": str(data.get("createdAt", "")),
+        "status": "success",
+        "totalTime": total_time,
+        "prepTime": prep_time,
+        "cookTime": cook_time,
+        "restTime": rest_time,
+        "rating": rating_val,
+        "rating_count": rating_count,
+        "number_ratings": rating_count,
+        "number_reviews": None,
+    }
+    return attributes
+
+
+def extract_recipe_attributes_webscraping(recipe_url: str) -> dict[str, Any]:
+    """Extract all attributes from a recipe URL using JSON-LD webscraping."""
     try:
         # Manual fetch to be more robust
         headers = {
@@ -438,6 +578,28 @@ def extract_recipe_attributes(recipe_url: str) -> dict[str, Any]:
             "status": "error",
             "error_message": str(e),
         }
+
+
+def extract_recipe_attributes(recipe_url: str) -> dict[str, Any]:
+    """Extract all attributes from a recipe URL using API first, with webscraping fallback."""
+    recipe_id = _get_id_from_url(recipe_url)
+    if recipe_id:
+        try:
+            return fetch_recipe_attributes_from_api(recipe_id)
+        except Exception as err:
+            _LOGGER.warning(
+                "Chefkoch API request failed or returned empty data for %s (%s). Falling back to less efficient webscraping.",
+                recipe_url,
+                err,
+            )
+
+    else:
+        _LOGGER.warning(
+            "Could not extract recipe ID from URL %s. Falling back to less efficient webscraping.",
+            recipe_url,
+        )
+
+    return extract_recipe_attributes_webscraping(recipe_url)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

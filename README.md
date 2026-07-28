@@ -139,3 +139,7 @@ Adds all ingredients from a specific Chefkoch sensor to the Home Assistant shopp
 
 - Huge thanks to [@THDMoritzEnderle](https://github.com/THDMoritzEnderle/chefkoch) for the original python library.
 - Thanks to [@M-Enderle](https://github.com/M-Enderle/get-chefkoch) for the new [get-chefkoch](https://github.com/M-Enderle/get-chefkoch) library used in the latest versions.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
