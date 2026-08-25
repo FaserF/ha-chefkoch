@@ -3,7 +3,7 @@ import json
 import os
 import re
 import subprocess
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 
 def run_git(args):
@@ -37,7 +37,7 @@ def main():
     manifest_path = manifest_files[0]
     domain = os.path.basename(os.path.dirname(manifest_path))
 
-    with open(manifest_path, "r", encoding="utf-8") as f:
+    with open(manifest_path, encoding="utf-8") as f:
         manifest = json.load(f)
 
     friendly_name = manifest.get("name", domain)
@@ -148,7 +148,7 @@ def main():
                 .decode("utf-8")
                 .strip()
             )
-        except (subprocess.SubprocessError, OSError, UnicodeDecodeError):
+        except subprocess.SubprocessError, OSError, UnicodeDecodeError:
             changelog_md = (
                 "_Changelog could not be generated automatically. See commit history._"
             )
@@ -252,7 +252,7 @@ def main():
         f"> **Affected areas:** {impact_str}\n"
     )
 
-    released_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M") + " UTC"
+    released_at = datetime.now(UTC).strftime("%Y-%m-%d %H:%M") + " UTC"
     body_parts = [
         f"# {friendly_name} {version}  {channel_badge}",
         "",

@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import json
 import logging
 import random
@@ -137,10 +138,8 @@ async def _fetch_recipe_url(sensor_config: dict[str, Any]) -> str | None:
 
         prep_times = sensor_cfg.get("prep_times")
         if prep_times and prep_times != "Alle":
-            try:
+            with contextlib.suppress(ValueError):
                 params["maxTime"] = str(int(prep_times))
-            except ValueError:
-                pass
 
         ratings = sensor_cfg.get("ratings")
         ratings_map = {"2": "2.0", "3": "3.0", "4": "4.0", "Top": "4.5"}
@@ -294,7 +293,7 @@ def _parse_duration(duration_str):
         m = int(minutes) if minutes else 0
         s = int(seconds) if seconds else 0
         return str(timedelta(hours=h, minutes=m, seconds=s))
-    except (ValueError, TypeError, OverflowError):
+    except ValueError, TypeError, OverflowError:
         return ""
 
 
@@ -430,7 +429,7 @@ def fetch_recipe_attributes_from_api(recipe_id: str) -> dict[str, Any]:
         try:
             m = int(mins)
             return str(timedelta(minutes=m))
-        except (ValueError, TypeError):
+        except ValueError, TypeError:
             return str(mins)
 
     prep_time = parse_api_time(data.get("preparationTime"))
@@ -524,7 +523,7 @@ def extract_recipe_attributes_webscraping(recipe_url: str) -> dict[str, Any]:
                 if recipe:
                     raw = recipe
                     break
-            except (json.JSONDecodeError, TypeError):
+            except json.JSONDecodeError, TypeError:
                 continue
 
         if not raw:
