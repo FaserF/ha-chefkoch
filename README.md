@@ -1,9 +1,9 @@
-[![hacs_badge](https://img.shields.io/badge/HACS-Default-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
+[![Home Assistant Marketplace](https://img.shields.io/badge/Marketplace-Chefkoch-41BDF5.svg?style=for-the-badge&logo=home-assistant)](https://my.home-assistant.io/redirect/marketplace_repository/?owner=FaserF&repository=ha-chefkoch&category=integration)
 [![Downloads (Current release)](https://img.shields.io/github/downloads/FaserF/ha-chefkoch/latest/chefkoch_ha.zip?label=Downloads%20(Current%20release)&style=for-the-badge)](https://github.com/FaserF/ha-chefkoch/releases)
 
-# Chefkoch Home Assistant Sensor 👨‍🍳
+# Chefkoch Home Assistant Integration 👨‍🍳
 
-The **Chefkoch** integration brings recipes from Germany's largest cooking platform, [Chefkoch.de](https://www.chefkoch.de/), directly into Home Assistant.
+The **Chefkoch** integration brings recipes from Germany's largest cooking platform, [Chefkoch.de](https://www.chefkoch.de/), directly into Home Assistant via the official Chefkoch REST API (100% pure API, zero webscraping).
 
 ---
 
@@ -23,55 +23,64 @@ The **Chefkoch** integration brings recipes from Germany's largest cooking platf
 ---
 ## Features ✨
 
-- **Daily Inspiration**: Automatically gets the 'Recipe of the Day'.
-- **Search Suggestions**: Get autocomplete suggestions from Chefkoch when adding a new sensor.
+- **Official REST API v2**: Fast, stable, and clean API queries without webscraping or brittle RSS feeds.
+- **Weather & Seasonal Intelligence**: Automatically suggests recipes based on current outdoor temperatures and conditions (light salads/wraps/bowls in summer; hearty soups/stews/casseroles in winter; seasonal specials for Halloween, Christmas, and Easter).
+- **Daily Inspiration**: Automatically gets top-rated and trending daily recommendations from Chefkoch.
+- **Search Suggestions**: Get real-time autocomplete suggestions from Chefkoch when adding or configuring sensors.
 - **Plus-Filter**: Automatically filters out "Chefkoch Plus" recipes that are behind a paywall.
-- **Random Recipes**: Discover new meals with random recipe sensors (Standard, Vegan, Vegetarian, Baking).
-- **Custom Search**: Create sensors for specific queries (e.g., "Lasagne", "Vegan Burger").
+- **Random Recipes**: Discover new meals with random recipe sensors (Standard, Weather, Vegan, Vegetarian, Baking).
+- **Custom Search**: Create sensors for specific queries (e.g., "Lasagne", "Vegan Burger", "Kürbis").
 - **Rich Data**: Attributes include ingredients, instructions, preparation time, nutritional info (protein, fat, carbs), cuisine style, saved cookbook count (`saved_recipes_count`), view count (`view_count`), top user comments (`top_comments`), subtitle, tags, category path (`category_breadcrumb`), author notes (`author_notes`), video links/IDs, and images.
 - **Meal Plan**: Generate a multi-day recipe plan via the `chefkoch_ha.generate_meal_plan` service; results are fired as a `chefkoch_meal_plan_generated` event.
 - **No Flicker**: Sensors maintain their state during background updates or when adding new sensors.
 
 ## Installation 🛠️
 
-### 1. Using HACS (Recommended)
+### 1. Using Home Assistant Marketplace (Recommended)
 
-This integration works great with HACS.
+This integration is available in the **Home Assistant Marketplace** (Home Assistant 2026.11+ / HACS):
 
-1.  Open HACS.
-2.  Search for "Chefkoch".
-3.  Click **Download**.
+1. Open Home Assistant and navigate to **Marketplace** (or **HACS** on older releases).
+2. Search for "**Chefkoch**".
+3. Click **Install** / **Download**.
 
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=FaserF&repository=ha-chefkoch&category=integration)
+[![Open your Home Assistant instance and open a repository inside the Marketplace.](https://my.home-assistant.io/badges/marketplace_repository.svg)](https://my.home-assistant.io/redirect/marketplace_repository/?owner=FaserF&repository=ha-chefkoch&category=integration)
 
 > [!TIP]
-> HACS updates the component automatically.
+> Home Assistant Marketplace automatically tracks and installs updates for the component.
 
 ### 2. Manual Installation
 
-1.  Download the latest [Release](https://github.com/FaserF/ha-chefkoch/releases/latest).
-2.  Extract the ZIP file.
-3.  Copy the `chefkoch_ha` folder to `<config>/custom_components/`.
+1. Download the latest [Release](https://github.com/FaserF/ha-chefkoch/releases/latest).
+2. Extract the ZIP file.
+3. Copy the `chefkoch_ha` folder to `<config>/custom_components/`.
 
 > [!WARNING]
-> Downloading directly from `master` branch is not recommended.
+> Downloading directly from `main` branch without a release zip is not recommended.
 
 ## Configuration ⚙️
 
-1.  Go to **Settings** -> **Devices & Services**.
-2.  Click **Add Integration**.
-3.  Search for "Chefkoch".
+1. Go to **Settings** -> **Devices & Services**.
+2. Click **Add Integration**.
+3. Search for "Chefkoch".
 
 [![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=chefkoch_ha)
 
 ### Accessing the data
 
 By default, the following sensors are created:
-- `sensor.chefkoch_random_recipe`: Random recipe
 - `sensor.chefkoch_daily_recipe`: Daily recipe recommendation from Chefkoch
+- `sensor.chefkoch_weather_recipe`: Weather- and season-adaptive recipe (hot weather light/salads, cold weather stews/soul food, holiday specials)
+- `sensor.chefkoch_random_recipe`: Random recipe
 - `sensor.chefkoch_vegan_recipe`: Vegan recipe
 - `sensor.chefkoch_vegetarian_recipe`: Vegetarian recipe
 - `sensor.chefkoch_random_baking_recipe`: Random baking recipe
+
+### Weather & Seasonal Customization
+You can tune the weather-adaptive sensor via **Settings > Devices & Services > Chefkoch > Configure > Configure Weather & Seasonal Sensor**:
+- **Seasonal Mode**: Automatic outdoor temperature & seasonal sync (`auto`), seasonal forced modes (`spring`, `summer`, `autumn`, `winter`), or holiday specials (`halloween`, `christmas`, `easter`).
+- **Holiday Specials**: Toggle automatic holiday-themed recipes during special weeks (e.g., Halloween treats & pumpkin dishes; Christmas cookies & roasts).
+- **Weather Entity**: Choose an outdoor weather entity (e.g., `weather.home`) to track local temperature and outdoor conditions.
 
 ## Custom Search Sensors
 
@@ -157,11 +166,46 @@ Generates a multi-day meal plan with recipe suggestions. Fires a `chefkoch_meal_
 }
 ```
 
+### `chefkoch_ha.get_recommendations`
+Fetches 3 distinct curated recipes directly via API without needing an integration reload or refreshing sensor states. Returns response data directly via `response_variable`:
+- `recipe_1`: Weather/seasonal dish (e.g. salads/wraps in summer, stews/soups in winter, holiday specials)
+- `recipe_2`: Vegetarian or vegan dish
+- `recipe_3`: Alternative weather/seasonal dish (guaranteed distinct from #1)
+
+```yaml
+service: chefkoch_ha.get_recommendations
+response_variable: food_recs
+
+# Access in automations or scripts:
+# {{ food_recs.recipe_1.title }} ({{ food_recs.recipe_1.url }})
+# {{ food_recs.recipe_2.title }} ({{ food_recs.recipe_2.url }})
+# {{ food_recs.recipe_3.title }} ({{ food_recs.recipe_3.url }})
+```
+
+### `chefkoch_ha.get_recipe`
+Fetches a single fresh recipe directly via API on-demand with full details (prep time, difficulty, rating, calories, ingredients, category path, image) and returns it in the response variable.
+
+| Field | Description |
+| :--- | :--- |
+| `recipe_type` | (Optional) Recipe type: `random`, `weather`, `vegan`, `vegetarian`, `baking`, or `search`. Default: `random`. |
+| `query` | (Optional) Custom search term or ingredient (e.g., `Pasta`, `Kürbis`, `Tofu`). |
+
+```yaml
+service: chefkoch_ha.get_recipe
+data:
+  recipe_type: weather
+response_variable: result
+
+# Access in automations or scripts:
+# {{ result.recipe.title }} - {{ result.recipe.url }}
+# {{ result.recipe.totalTime }} | {{ result.recipe.calories }}
+```
+
 ## Credits
 
 - Huge thanks to [@THDMoritzEnderle](https://github.com/THDMoritzEnderle/chefkoch) for the original python library.
-- Thanks to [@M-Enderle](https://github.com/M-Enderle/get-chefkoch) for the new [get-chefkoch](https://github.com/M-Enderle/get-chefkoch) library used in the latest versions.
+- Thanks to [@M-Enderle](https://github.com/M-Enderle/get-chefkoch) for the [get-chefkoch](https://github.com/M-Enderle/get-chefkoch) library.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

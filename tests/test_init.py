@@ -23,7 +23,11 @@ def mock_hass():
     hass.config_entries.async_forward_entry_setups = AsyncMock(return_value=True)
     hass.config_entries.async_unload_platforms = AsyncMock(return_value=True)
     hass.config_entries.async_reload = AsyncMock()
-    hass.async_add_executor_job = AsyncMock()
+
+    async def _run_executor(func, *args):
+        return func(*args)
+
+    hass.async_add_executor_job = AsyncMock(side_effect=_run_executor)
     return hass
 
 
@@ -72,77 +76,11 @@ async def test_options_update_listener(mock_hass, mock_config_entry):
     mock_hass.config_entries.async_reload.assert_called_once_with("test_entry_id")
 
 
-def test_extract_recipe_attributes():
-    """Test extracting attributes from a mock recipe HTML."""
-    html_content = """
-    <html>
-    <script type="application/ld+json">
-    {
-        "@type": "Recipe",
-        "name": "Test Recipe von Chef",
-        "author": {"name": "Chef"},
-        "recipeInstructions": [
-            {"@type": "HowToSection", "name": "Section", "itemListElement": [{"@type": "HowToStep", "text": "Step 1"}]}
-        ],
-        "aggregateRating": {"ratingValue": 4.5, "ratingCount": 10, "reviewCount": 5},
-        "nutrition": {"calories": "500 kcal", "proteinContent": "20 g"}
-    }
-    </script>
-    </html>
-    """
-    mock_response = MagicMock()
-    mock_response.status_code = 200
-    mock_response.text = html_content
-    mock_response.raise_for_status = MagicMock()
-
-    with patch("requests.get", return_value=mock_response):
-        attributes = extract_recipe_attributes("http://test")
-
-    assert attributes["title"] == "Test Recipe"
-    assert attributes["status"] == "success"
-    assert "Step 1" in attributes["instructions"]
-    assert "Section" in attributes["instructions"]
-    assert attributes["calories"] == "500 kcal"
-    assert attributes["protein"] == "20 g"
-
-
-def test_extract_recipe_attributes_graph():
-    """Test extracting attributes when JSON-LD is wrapped in @graph."""
-    html_content = """
-    <html>
-    <head>
-    <meta property="og:image" content="https://img.chefkoch-cdn.de/test.jpg">
-    </head>
-    <script type="application/ld+json">
-    {
-        "@context": "https://schema.org",
-        "@graph": [
-            {
-                "@type": "Recipe",
-                "name": "Graph Recipe von AuthorName",
-                "recipeInstructions": [
-                    {"@type": "HowToStep", "text": "Mix ingredients"}
-                ],
-                "aggregateRating": {"ratingValue": 4.8, "ratingCount": 20}
-            }
-        ]
-    }
-    </script>
-    </html>
-    """
-    mock_response = MagicMock()
-    mock_response.status_code = 200
-    mock_response.text = html_content
-    mock_response.raise_for_status = MagicMock()
-
-    with patch("requests.get", return_value=mock_response):
-        attributes = extract_recipe_attributes("http://test")
-
-    assert attributes["title"] == "Graph Recipe"
-    assert attributes["author"] == "AuthorName"
-    assert attributes["status"] == "success"
-    assert "Mix ingredients" in attributes["instructions"]
-    assert attributes["image_url"] == "https://img.chefkoch-cdn.de/test.jpg"
+def test_extract_recipe_attributes_invalid_url():
+    """Test extracting attributes when URL has no recipe ID."""
+    attributes = extract_recipe_attributes("https://www.chefkoch.de/magazin/artikel/")
+    assert attributes["status"] == "error"
+    assert "Could not extract recipe ID" in attributes["error_message"]
 
 
 def test_extract_recipe_attributes_api():
@@ -297,42 +235,7 @@ def test_fetch_recipe_url_api_filters():
     assert params.get("query") == "Pasta"
     assert params.get("maxTime") == "30"
     assert params.get("minimumRating") == "4.0"
-    assert params.get("orderBy") == "rating"
-
-
-def test_extract_recipe_attributes_api_fallback_to_webscraping(caplog):
-    """Test fallback to webscraping with warning log when API fails."""
-    html_content = """
-    <html>
-    <script type="application/ld+json">
-    {
-        "@type": "Recipe",
-        "name": "Fallback Recipe von Web",
-        "recipeInstructions": ["Mix well"]
-    }
-    </script>
-    </html>
-    """
-
-    def mock_get(url, **kwargs):
-        resp = MagicMock()
-        if "api.chefkoch.de" in url:
-            resp.status_code = 500
-            resp.raise_for_status.side_effect = Exception("API Server Error 500")
-        else:
-            resp.status_code = 200
-            resp.text = html_content
-            resp.raise_for_status = MagicMock()
-        return resp
-
-    with patch("requests.get", side_effect=mock_get):
-        attributes = extract_recipe_attributes(
-            "https://www.chefkoch.de/rezepte/123456/fallback.html"
-        )
-
-    assert attributes["title"] == "Fallback Recipe"
-    assert attributes["status"] == "success"
-    assert "Falling back to less efficient webscraping" in caplog.text
+    assert params.get("sort") == "rating"
 
 
 def test_extract_recipe_attributes_error():
@@ -551,3 +454,120 @@ async def test_generate_meal_plan(mock_hass, mock_config_entry):
     assert len(event_data["meal_plan"]) == 2
     assert event_data["meal_plan"][0]["day"] == "1"
     assert event_data["meal_plan"][0]["title"] == "Pasta Primavera"
+
+
+@pytest.mark.asyncio
+async def test_get_recipe_service(mock_hass, mock_config_entry):
+    """Test chefkoch_ha.get_recipe service returns full recipe data in response."""
+    recipe_attrs = {
+        "title": "Frische Kürbissuppe",
+        "url": "https://www.chefkoch.de/rezepte/999111/",
+        "calories": "250 kcal",
+        "status": "success",
+    }
+
+    await async_setup_entry(mock_hass, mock_config_entry)
+
+    handler = None
+    for call in mock_hass.services.async_register.call_args_list:
+        if call[0][1] == "get_recipe":
+            handler = call[0][2]
+            break
+
+    assert handler is not None
+
+    service_call = MagicMock()
+    service_call.data = {"recipe_type": "weather"}
+
+    with (
+        patch(
+            "custom_components.chefkoch_ha._fetch_recipe_url",
+            return_value="https://www.chefkoch.de/rezepte/999111/",
+        ),
+        patch(
+            "custom_components.chefkoch_ha.extract_recipe_attributes",
+            return_value=recipe_attrs,
+        ),
+        patch(
+            "custom_components.chefkoch_ha._get_weather_recipe_query",
+            return_value=("Kürbissuppe", "Herbstlich wärmend"),
+        ),
+    ):
+        res = await handler(service_call)
+
+    assert res is not None
+    assert "recipe" in res
+    assert res["recipe"]["title"] == "Frische Kürbissuppe"
+    assert res["recipe"]["weather_category"] == "Herbstlich wärmend"
+
+
+@pytest.mark.asyncio
+async def test_get_recommendations_service(mock_hass, mock_config_entry):
+    """Test chefkoch_ha.get_recommendations service returns 3 curated distinct recipes."""
+    recipe_attrs_1 = {
+        "title": "Rezept 1",
+        "url": "https://www.chefkoch.de/rezepte/1/",
+        "status": "success",
+    }
+    recipe_attrs_2 = {
+        "title": "Rezept 2",
+        "url": "https://www.chefkoch.de/rezepte/2/",
+        "status": "success",
+    }
+    recipe_attrs_3 = {
+        "title": "Rezept 3",
+        "url": "https://www.chefkoch.de/rezepte/3/",
+        "status": "success",
+    }
+
+    await async_setup_entry(mock_hass, mock_config_entry)
+
+    handler = None
+    for call in mock_hass.services.async_register.call_args_list:
+        if call[0][1] == "get_recommendations":
+            handler = call[0][2]
+            break
+
+    assert handler is not None
+
+    service_call = MagicMock()
+    service_call.data = {}
+
+    urls = [
+        "https://www.chefkoch.de/rezepte/1/",
+        "https://www.chefkoch.de/rezepte/2/",
+        "https://www.chefkoch.de/rezepte/3/",
+    ]
+    url_iter = iter(urls)
+
+    def mock_fetch_attr(url):
+        if "1" in url:
+            return dict(recipe_attrs_1)
+        if "2" in url:
+            return dict(recipe_attrs_2)
+        return dict(recipe_attrs_3)
+
+    with (
+        patch(
+            "custom_components.chefkoch_ha._fetch_recipe_url",
+            side_effect=lambda *args, **kwargs: next(url_iter),
+        ),
+        patch(
+            "custom_components.chefkoch_ha.extract_recipe_attributes",
+            side_effect=mock_fetch_attr,
+        ),
+        patch(
+            "custom_components.chefkoch_ha._get_weather_recipe_query",
+            return_value=("Kürbissuppe", "Herbstlich wärmend"),
+        ),
+    ):
+        res = await handler(service_call)
+
+    assert res is not None
+    assert "recipe_1" in res
+    assert "recipe_2" in res
+    assert "recipe_3" in res
+    assert len(res["recipes"]) == 3
+    assert res["recipe_1"]["title"] == "Rezept 1"
+    assert res["recipe_2"]["title"] == "Rezept 2"
+    assert res["recipe_3"]["title"] == "Rezept 3"

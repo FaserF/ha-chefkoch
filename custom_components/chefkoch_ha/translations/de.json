@@ -21,7 +21,8 @@
           "add_sensor": "Neuen Such-Sensor hinzufügen",
           "edit_sensor": "Bestehenden Such-Sensor bearbeiten",
           "remove_sensor": "Such-Sensor entfernen",
-          "update_interval": "Aktualisierungsintervall ändern"
+          "update_interval": "Aktualisierungsintervall ändern",
+          "configure_weather": "Wetter- & Saison-Specials konfigurieren"
         }
       },
       "update_interval": {
@@ -68,6 +69,15 @@
         "title": "Sensoren entfernen",
         "data": {
           "sensors_to_remove": "Sensoren zum Entfernen auswählen"
+        }
+      },
+      "configure_weather": {
+        "title": "Wetter- & Saison-Specials",
+        "description": "Konfiguriere Wetter- und saisonale Rezept-Empfehlungen (z.B. Halloween, Weihnachten, Sommer-Grillen).",
+        "data": {
+          "weather_seasonal_mode": "Saison- & Themen-Modus",
+          "include_holiday_specials": "Feiertags-Specials berücksichtigen (Halloween, Weihnachten, Ostern)",
+          "weather_entity": "Wetter-Entität (optional)"
         }
       }
     },

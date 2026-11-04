@@ -94,6 +94,13 @@ def setup_mocks():
     ha_core = types.ModuleType("homeassistant.core")
     ha_core.HomeAssistant = MagicMock
     ha_core.callback = lambda x: x
+
+    class MockSupportsResponse:
+        NONE = "none"
+        OPTIONAL = "optional"
+        ONLY = "only"
+
+    ha_core.SupportsResponse = MockSupportsResponse
     sys.modules["homeassistant.core"] = ha_core
     ha.core = ha_core
 

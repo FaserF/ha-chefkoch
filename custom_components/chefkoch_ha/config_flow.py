@@ -171,6 +171,7 @@ class ChefkochConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ign
 class ChefkochOptionsFlowHandler(config_entries.OptionsFlow):
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         super().__init__()
+        self.config_entry = config_entry
         self.current_sensors = config_entry.options.get("sensors", [])
         self.sensor_to_edit_id = None
         self.data = dict(config_entry.options)
@@ -183,11 +184,47 @@ class ChefkochOptionsFlowHandler(config_entries.OptionsFlow):
         return processed_input
 
     async def async_step_init(self, user_input=None):
-        menu_options = ["update_interval", "add_sensor"]
+        menu_options = ["update_interval", "configure_weather", "add_sensor"]
         custom_sensors = [s for s in self.current_sensors if s.get("type") == "search"]
         if custom_sensors:
             menu_options.extend(["edit_sensor", "remove_sensor"])
         return self.async_show_menu(step_id="init", menu_options=menu_options)
+
+    async def async_step_configure_weather(self, user_input=None):
+        """Configure weather and seasonal specials."""
+        from .recipe_fetcher import SEASONAL_MODES
+
+        if user_input is not None:
+            self.data["weather_seasonal_mode"] = user_input.get(
+                "weather_seasonal_mode", "auto"
+            )
+            self.data["include_holiday_specials"] = user_input.get(
+                "include_holiday_specials", True
+            )
+            self.data["weather_entity"] = user_input.get("weather_entity", "")
+            return self.async_create_entry(title="", data=self.data)
+
+        current_mode = self.data.get("weather_seasonal_mode", "auto")
+        current_holidays = self.data.get("include_holiday_specials", True)
+        current_entity = self.data.get("weather_entity", "")
+
+        schema = vol.Schema(
+            {
+                vol.Required(
+                    "weather_seasonal_mode",
+                    default=current_mode,
+                ): vol.In(SEASONAL_MODES),
+                vol.Required(
+                    "include_holiday_specials",
+                    default=current_holidays,
+                ): bool,
+                vol.Optional(
+                    "weather_entity",
+                    default=current_entity,
+                ): str,
+            }
+        )
+        return self.async_show_form(step_id="configure_weather", data_schema=schema)
 
     async def async_step_update_interval(self, user_input=None):
         """Handle update interval setup."""

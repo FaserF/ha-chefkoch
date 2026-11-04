@@ -1,0 +1,9 @@
+{
+  "name": "Chefkoch",
+  "render_readme": true,
+  "country": [
+    "DE"
+  ],
+  "zip_release": true,
+  "filename": "chefkoch_ha.zip"
+}

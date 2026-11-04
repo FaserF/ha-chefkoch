@@ -113,3 +113,32 @@ async def test_options_flow_remove_sensor(mock_hass):
     result = await flow.async_step_remove_sensor({"sensors_to_remove": ["1"]})
     assert result["type"] == "create_entry"
     assert len(result["data"]["sensors"]) == 0
+
+
+@pytest.mark.asyncio
+async def test_options_flow_configure_weather(mock_hass):
+    """Test options flow configure weather step."""
+    entry = MagicMock()
+    entry.options = {"sensors": []}
+    flow = ChefkochOptionsFlowHandler(entry)
+    flow.hass = mock_hass
+    flow.async_show_form = MagicMock(return_value={"type": "form"})
+    flow.async_create_entry = MagicMock(
+        return_value={"type": "create_entry", "data": {}}
+    )
+
+    # Show form
+    result = await flow.async_step_configure_weather()
+    assert result["type"] == "form"
+
+    # Submit
+    user_input = {
+        "weather_seasonal_mode": "halloween",
+        "include_holiday_specials": True,
+        "weather_entity": "weather.home",
+    }
+    result = await flow.async_step_configure_weather(user_input)
+    assert result["type"] == "create_entry"
+    assert flow.data["weather_seasonal_mode"] == "halloween"
+    assert flow.data["include_holiday_specials"] is True
+    assert flow.data["weather_entity"] == "weather.home"
