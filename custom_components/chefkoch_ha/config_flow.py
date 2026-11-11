@@ -98,18 +98,15 @@ def _select(
 
 
 def _number(min_: float, max_: float, step: float, unit: str | None = None) -> Any:
-    kwargs: dict[str, Any] = {}
-    if unit:  # the selector schema rejects unit_of_measurement=None
-        kwargs["unit_of_measurement"] = unit
-    return selector.NumberSelector(
-        selector.NumberSelectorConfig(
-            min=min_,
-            max=max_,
-            step=step,
-            mode=selector.NumberSelectorMode.BOX,
-            **kwargs,
-        )
+    config = selector.NumberSelectorConfig(
+        min=min_,
+        max=max_,
+        step=step,
+        mode=selector.NumberSelectorMode.BOX,
     )
+    if unit:  # the selector schema rejects unit_of_measurement=None
+        config["unit_of_measurement"] = unit
+    return selector.NumberSelector(config)
 
 
 def _words() -> Any:
@@ -216,7 +213,7 @@ class ChefkochConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ign
                 ): selector.SelectSelector(
                     selector.SelectSelectorConfig(
                         options=[
-                            {"value": s["id"], "label": s["name"]}
+                            selector.SelectOptionDict(value=s["id"], label=s["name"])
                             for s in DEFAULT_SENSORS
                         ],
                         multiple=True,
@@ -298,7 +295,9 @@ class ChefkochOptionsFlowHandler(config_entries.OptionsFlow):
                         selector.SelectSelector(
                             selector.SelectSelectorConfig(
                                 options=[
-                                    {"value": s["id"], "label": s["name"]}
+                                    selector.SelectOptionDict(
+                                        value=s["id"], label=s["name"]
+                                    )
                                     for s in DEFAULT_SENSORS
                                 ],
                                 multiple=True,
@@ -601,7 +600,7 @@ class ChefkochOptionsFlowHandler(config_entries.OptionsFlow):
                     vol.Required("sensors_to_remove"): selector.SelectSelector(
                         selector.SelectSelectorConfig(
                             options=[
-                                {"value": k, "label": v}
+                                selector.SelectOptionDict(value=k, label=v)
                                 for k, v in custom_sensors.items()
                             ],
                             multiple=True,
