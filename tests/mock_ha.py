@@ -185,8 +185,8 @@ def setup_mocks():
             return self
 
     vol.Schema = MockSchema
-    vol.Optional = lambda x, default=None: x  # type: ignore[misc]
-    vol.Required = lambda x, default=None: x  # type: ignore[misc]
+    vol.Optional = lambda x, default=None, **kwargs: x  # type: ignore[misc]
+    vol.Required = lambda x, default=None, **kwargs: x  # type: ignore[misc]
     vol.All = lambda *args: lambda x: x  # type: ignore[misc]
     vol.Coerce = lambda x: lambda y: y  # type: ignore[misc]
     vol.Range = lambda min=None, max=None: lambda x: x  # type: ignore[misc]

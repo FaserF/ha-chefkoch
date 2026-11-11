@@ -31,6 +31,16 @@ def mock_hass():
     return hass
 
 
+@pytest.fixture(autouse=True)
+def no_network_recipes():
+    """Never hit the real recipe APIs unless a test patches the engine itself."""
+    with patch(
+        "custom_components.chefkoch_ha.async_get_recipes",
+        new=AsyncMock(return_value=[]),
+    ):
+        yield
+
+
 @pytest.fixture
 def mock_config_entry():
     entry = MagicMock()
@@ -331,16 +341,25 @@ async def test_fetch_recipe_url_plus_skip():
 @pytest.mark.asyncio
 async def test_async_update_data(mock_hass, mock_config_entry):
     """Test updating data for all sensors."""
-    mock_hass.async_add_executor_job = AsyncMock(
-        return_value={"title": "Data", "status": "success"}
-    )
+    recipe = {"title": "Data", "status": "success", "url": "http://recipe"}
     with patch(
-        "custom_components.chefkoch_ha._fetch_recipe_url",
-        return_value=("http://recipe", "Name"),
+        "custom_components.chefkoch_ha.async_get_recipes",
+        new=AsyncMock(return_value=[recipe]),
+    ) as mock_get:
+        data = await async_update_data(mock_hass, mock_config_entry)
+    assert data["test_sensor"] == recipe
+    assert mock_get.call_args.kwargs["recipe_type"] == "search"
+
+
+@pytest.mark.asyncio
+async def test_async_update_data_no_result(mock_hass, mock_config_entry):
+    """A sensor without any matching recipe gets a warning placeholder."""
+    with patch(
+        "custom_components.chefkoch_ha.async_get_recipes",
+        new=AsyncMock(return_value=[]),
     ):
         data = await async_update_data(mock_hass, mock_config_entry)
-    assert "test_sensor" in data
-    assert data["test_sensor"] == {"title": "Data", "status": "success"}
+    assert data["test_sensor"]["status"] == "warning"
 
 
 def test_scale_ingredient():
@@ -390,184 +409,133 @@ async def test_add_to_shopping_list_scaled(mock_hass, mock_config_entry):
     )
 
 
+def _get_handler(mock_hass, name):
+    for call in mock_hass.services.async_register.call_args_list:
+        if call[0][1] == name:
+            return call[0][2]
+    return None
+
+
+def _recipe(n, **extra):
+    return {
+        "title": f"Rezept {n}",
+        "url": f"https://www.chefkoch.de/rezepte/{n}/",
+        "category": "Wärmend & Deftig",
+        "status": "success",
+        **extra,
+    }
+
+
 @pytest.mark.asyncio
 async def test_generate_meal_plan(mock_hass, mock_config_entry):
     """Test generate_meal_plan service fires event with meal plan entries."""
-    from custom_components.chefkoch_ha import async_setup_entry
-
-    api_response = {
-        "results": [
-            {
-                "recipe": {
-                    "id": "111111",
-                    "title": "Pasta Primavera",
-                    "isPlus": False,
-                }
-            }
-        ]
-    }
-    recipe_attrs = {
-        "title": "Pasta Primavera",
-        "status": "success",
-        "subtitle": "",
-        "url": "https://www.chefkoch.de/rezepte/111111/",
-        "ingredients": [],
-        "instructions": "",
-        "servings": "4",
-        "top_comments": [],
-    }
-    mock_api_resp = MagicMock()
-    mock_api_resp.status_code = 200
-    mock_api_resp.json.side_effect = [api_response, recipe_attrs]
-
     await async_setup_entry(mock_hass, mock_config_entry)
-
-    # Find the registered generate_meal_plan handler
-    handler = None
-    for call in mock_hass.services.async_register.call_args_list:
-        if call[0][1] == "generate_meal_plan":
-            handler = call[0][2]
-            break
-
+    handler = _get_handler(mock_hass, "generate_meal_plan")
     assert handler is not None
 
     service_call = MagicMock()
     service_call.data = {"days": 2, "query": "Pasta"}
+    results = iter([[_recipe(1)], [_recipe(2)]])
 
-    with (
-        patch(
-            "custom_components.chefkoch_ha._fetch_recipe_url",
-            return_value="https://www.chefkoch.de/rezepte/111111/",
-        ),
-        patch(
-            "custom_components.chefkoch_ha.fetch_recipe_attributes_from_api",
-            return_value=recipe_attrs,
-        ),
-    ):
-        await handler(service_call)
+    with patch(
+        "custom_components.chefkoch_ha.async_get_recipes",
+        new=AsyncMock(side_effect=lambda *a, **k: next(results)),
+    ) as mock_get:
+        res = await handler(service_call)
 
-    assert mock_hass.bus.async_fire.called
     event_name, event_data = mock_hass.bus.async_fire.call_args[0]
     assert event_name == "chefkoch_meal_plan_generated"
     assert event_data["days"] == 2
     assert event_data["query"] == "Pasta"
     assert len(event_data["meal_plan"]) == 2
     assert event_data["meal_plan"][0]["day"] == "1"
-    assert event_data["meal_plan"][0]["title"] == "Pasta Primavera"
+    assert event_data["meal_plan"][0]["title"] == "Rezept 1"
+    assert len(res["meal_plan"]) == 2
+    # the second day must not repeat the first recipe
+    assert mock_get.call_args.kwargs["exclude_urls"] == {_recipe(1)["url"]}
+    assert mock_get.call_args.kwargs["overrides"] == {"query": "Pasta"}
 
 
 @pytest.mark.asyncio
 async def test_get_recipe_service(mock_hass, mock_config_entry):
-    """Test chefkoch_ha.get_recipe service returns full recipe data in response."""
-    recipe_attrs = {
-        "title": "Frische Kürbissuppe",
-        "url": "https://www.chefkoch.de/rezepte/999111/",
-        "calories": "250 kcal",
-        "status": "success",
-    }
-
+    """Test chefkoch_ha.get_recipe returns recipe data and forwards filters."""
     await async_setup_entry(mock_hass, mock_config_entry)
-
-    handler = None
-    for call in mock_hass.services.async_register.call_args_list:
-        if call[0][1] == "get_recipe":
-            handler = call[0][2]
-            break
-
+    handler = _get_handler(mock_hass, "get_recipe")
     assert handler is not None
 
     service_call = MagicMock()
-    service_call.data = {"recipe_type": "weather"}
+    service_call.data = {
+        "recipe_type": "weather",
+        "meal_type": "main",
+        "exclude_keywords": ["Kuchen"],
+        "providers": ["chefkoch", "themealdb"],
+    }
+    recipe = _recipe(9, weather_category="Herbstlich wärmend")
 
-    with (
-        patch(
-            "custom_components.chefkoch_ha._fetch_recipe_url",
-            return_value="https://www.chefkoch.de/rezepte/999111/",
-        ),
-        patch(
-            "custom_components.chefkoch_ha.extract_recipe_attributes",
-            return_value=recipe_attrs,
-        ),
-        patch(
-            "custom_components.chefkoch_ha._get_weather_recipe_query",
-            return_value=("Kürbissuppe", "Herbstlich wärmend"),
-        ),
-    ):
+    with patch(
+        "custom_components.chefkoch_ha.async_get_recipes",
+        new=AsyncMock(return_value=[recipe]),
+    ) as mock_get:
         res = await handler(service_call)
 
-    assert res is not None
-    assert "recipe" in res
-    assert res["recipe"]["title"] == "Frische Kürbissuppe"
+    kwargs = mock_get.call_args.kwargs
+    assert kwargs["recipe_type"] == "weather"
+    assert kwargs["overrides"] == {"meal_type": "main", "exclude_keywords": ["Kuchen"]}
+    assert kwargs["providers"] == ["chefkoch", "themealdb"]
+    assert res["recipe"]["title"] == "Rezept 9"
     assert res["recipe"]["weather_category"] == "Herbstlich wärmend"
+    assert res["count"] == 1
+
+
+@pytest.mark.asyncio
+async def test_search_recipes_service(mock_hass, mock_config_entry):
+    """search_recipes returns a list plus formatted messages."""
+    await async_setup_entry(mock_hass, mock_config_entry)
+    handler = _get_handler(mock_hass, "search_recipes")
+    service_call = MagicMock()
+    service_call.data = {"query": "Suppe", "count": 2, "max_total_minutes": 30}
+
+    with patch(
+        "custom_components.chefkoch_ha.async_get_recipes",
+        new=AsyncMock(return_value=[_recipe(1), _recipe(2)]),
+    ) as mock_get:
+        res = await handler(service_call)
+
+    assert mock_get.call_args.kwargs["count"] == 2
+    assert mock_get.call_args.kwargs["overrides"]["max_total_minutes"] == 30
+    assert len(res["recipes"]) == 2
+    assert "[Rezept 1](https://www.chefkoch.de/rezepte/1/)" in res["message_markdown"]
 
 
 @pytest.mark.asyncio
 async def test_get_recommendations_service(mock_hass, mock_config_entry):
-    """Test chefkoch_ha.get_recommendations service returns 3 curated distinct recipes."""
-    recipe_attrs_1 = {
-        "title": "Rezept 1",
-        "url": "https://www.chefkoch.de/rezepte/1/",
-        "status": "success",
-    }
-    recipe_attrs_2 = {
-        "title": "Rezept 2",
-        "url": "https://www.chefkoch.de/rezepte/2/",
-        "status": "success",
-    }
-    recipe_attrs_3 = {
-        "title": "Rezept 3",
-        "url": "https://www.chefkoch.de/rezepte/3/",
-        "status": "success",
-    }
-
+    """get_recommendations returns N distinct recipes and one-line-per-recipe text."""
     await async_setup_entry(mock_hass, mock_config_entry)
-
-    handler = None
-    for call in mock_hass.services.async_register.call_args_list:
-        if call[0][1] == "get_recommendations":
-            handler = call[0][2]
-            break
-
+    handler = _get_handler(mock_hass, "get_recommendations")
     assert handler is not None
 
     service_call = MagicMock()
-    service_call.data = {}
+    service_call.data = {"header": "Heute?", "meal_type": "main"}
+    results = iter([[_recipe(1)], [_recipe(2)], [_recipe(3)]])
 
-    urls = [
-        "https://www.chefkoch.de/rezepte/1/",
-        "https://www.chefkoch.de/rezepte/2/",
-        "https://www.chefkoch.de/rezepte/3/",
-    ]
-    url_iter = iter(urls)
-
-    def mock_fetch_attr(url):
-        if "1" in url:
-            return dict(recipe_attrs_1)
-        if "2" in url:
-            return dict(recipe_attrs_2)
-        return dict(recipe_attrs_3)
-
-    with (
-        patch(
-            "custom_components.chefkoch_ha._fetch_recipe_url",
-            side_effect=lambda *args, **kwargs: next(url_iter),
-        ),
-        patch(
-            "custom_components.chefkoch_ha.extract_recipe_attributes",
-            side_effect=mock_fetch_attr,
-        ),
-        patch(
-            "custom_components.chefkoch_ha._get_weather_recipe_query",
-            return_value=("Kürbissuppe", "Herbstlich wärmend"),
-        ),
-    ):
+    with patch(
+        "custom_components.chefkoch_ha.async_get_recipes",
+        new=AsyncMock(side_effect=lambda *a, **k: next(results)),
+    ) as mock_get:
         res = await handler(service_call)
 
-    assert res is not None
-    assert "recipe_1" in res
-    assert "recipe_2" in res
-    assert "recipe_3" in res
+    types = [c.kwargs["recipe_type"] for c in mock_get.call_args_list]
+    assert types[0] == "weather"
+    assert types[1] in ("vegan", "vegetarian")
+    assert types[2] == "weather"
+    assert [res["recipe_1"]["title"], res["recipe_2"]["title"]] == [
+        "Rezept 1",
+        "Rezept 2",
+    ]
     assert len(res["recipes"]) == 3
-    assert res["recipe_1"]["title"] == "Rezept 1"
-    assert res["recipe_2"]["title"] == "Rezept 2"
-    assert res["recipe_3"]["title"] == "Rezept 3"
+    lines = res["message_html"].split("\n")
+    assert lines[0] == "Heute?"
+    assert lines[2].startswith(
+        '1️⃣ <a href="https://www.chefkoch.de/rezepte/1/">Rezept 1</a>'
+    )
+    assert len(lines) == 5

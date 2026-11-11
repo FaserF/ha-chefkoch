@@ -11,9 +11,9 @@
   "loggers": [
     "get_chefkoch"
   ],
+  "quality_scale": "platinum",
   "requirements": [
     "get-chefkoch==1.1.0"
   ],
-  "version": "3.1.1-dev0",
-  "quality_scale": "platinum"
+  "version": "3.1.1-dev0"
 }

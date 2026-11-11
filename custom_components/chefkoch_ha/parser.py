@@ -65,7 +65,9 @@ def fetch_recipe_comments_from_api(recipe_id: str, limit: int = 5) -> list[str]:
     return []
 
 
-def fetch_recipe_attributes_from_api(recipe_id: str) -> dict[str, Any]:
+def fetch_recipe_attributes_from_api(
+    recipe_id: str, include_comments: bool = True
+) -> dict[str, Any]:
     """Fetch recipe attributes directly from Chefkoch v2 REST API."""
     api_url = f"https://api.chefkoch.de/v2/recipes/{recipe_id}"
     response = requests.get(api_url, headers=HEADERS, timeout=10)
@@ -166,7 +168,9 @@ def fetch_recipe_attributes_from_api(recipe_id: str) -> dict[str, Any]:
         if isinstance(b, dict) and b.get("title")
     ]
 
-    comments = fetch_recipe_comments_from_api(recipe_id, limit=5)
+    comments = (
+        fetch_recipe_comments_from_api(recipe_id, limit=5) if include_comments else []
+    )
 
     attributes: dict[str, Any] = {
         "title": title,

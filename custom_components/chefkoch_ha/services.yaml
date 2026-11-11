@@ -23,7 +23,7 @@ add_to_shopping_list:
           mode: box
 generate_meal_plan:
   name: Generate Meal Plan
-  description: Generates a multi-day meal plan with recipe suggestions and fires a chefkoch_meal_plan_generated event.
+  description: Generates a multi-day meal plan, fires a chefkoch_meal_plan_generated event and returns it (with ready-made message_markdown/html/plain, title = link, one recipe per line).
   fields:
     days:
       name: Number of Days
@@ -35,48 +35,507 @@ generate_meal_plan:
           min: 1
           max: 7
           mode: slider
+    recipe_type:
+      name: Recipe type
+      required: false
+      default: search
+      selector:
+        select:
+          options: [search, random, weather, vegan, vegetarian, baking, daily]
+          translation_key: sensor_type
     query:
-      name: Search Query
-      description: Optional search term or diet preference (e.g., 'Schnell', 'Vegetarisch', 'Pasta').
+      name: Search term
+      description: Free-text search (e.g. 'Pasta', 'Kürbissuppe'). Optional.
       required: false
       selector:
         text:
+    meal_type:
+      name: Meal type
+      description: Restrict to a kind of dish. 'main' excludes desserts, baking, drinks and breakfast (ideal for planning dinner).
+      required: false
+      selector:
+        select:
+          options: [any, main, dessert, breakfast, soup, salad, snack, side, drink]
+          translation_key: meal_type
+    diets:
+      name: Diets
+      description: Required diets.
+      required: false
+      selector:
+        select:
+          multiple: true
+          options: [vegan, vegetarian, low_carb, low_calorie, low_fat, gluten_free]
+          translation_key: diet
+    include_keywords:
+      name: Must contain
+      description: At least one of these words must appear in title, tags, category or ingredients.
+      required: false
+      selector:
+        text:
+          multiple: true
+    exclude_keywords:
+      name: Must not contain
+      description: Recipes with any of these words in title, tags or category are skipped (e.g. Kuchen, Torte).
+      required: false
+      selector:
+        text:
+          multiple: true
+    exclude_ingredients:
+      name: Excluded ingredients
+      description: Recipes containing any of these ingredients are skipped.
+      required: false
+      selector:
+        text:
+          multiple: true
+    categories:
+      name: Categories / cuisines
+      description: At least one must match the recipe's category or cuisine (e.g. Italien, Suppen).
+      required: false
+      selector:
+        text:
+          multiple: true
+    exclude_categories:
+      name: Excluded categories
+      description: Recipes in any of these categories are skipped.
+      required: false
+      selector:
+        text:
+          multiple: true
+    max_total_minutes:
+      name: Max. total time
+      description: Maximum total preparation time in minutes.
+      required: false
+      selector:
+        number:
+          min: 5
+          max: 600
+          step: 5
+          unit_of_measurement: min
+          mode: box
+    min_rating:
+      name: Min. rating
+      description: Minimum average rating (1-5).
+      required: false
+      selector:
+        number:
+          min: 1
+          max: 5
+          step: 0.5
+          mode: box
+    max_difficulty:
+      name: Max. difficulty
+      required: false
+      selector:
+        select:
+          options: [einfach, normal, pfiffig]
+          translation_key: difficulty
+    max_calories:
+      name: Max. calories
+      description: Maximum kcal per serving.
+      required: false
+      selector:
+        number:
+          min: 50
+          max: 3000
+          step: 50
+          unit_of_measurement: kcal
+          mode: box
+    sort:
+      name: Sort order
+      required: false
+      selector:
+        select:
+          options: [relevance, rating, newest]
+          translation_key: sort
+    providers:
+      name: Recipe sources
+      description: Providers to query in this order (chefkoch, themealdb, spoonacular). Empty = integration settings.
+      required: false
+      selector:
+        select:
+          multiple: true
+          options: [chefkoch, themealdb, spoonacular]
+          translation_key: provider
+    header:
+      name: Message header
+      description: Text placed above the recipe list in message_markdown / message_html / message_plain (write it in the target format, e.g. <b>..</b> for Telegram HTML).
+      required: false
+      selector:
+        text:
+          multiline: true
+    footer:
+      name: Message footer
+      description: Text placed below the recipe list.
+      required: false
+      selector:
+        text:
+          multiline: true
+    numbering:
+      name: Numbering style
+      required: false
+      default: emoji
+      selector:
+        select:
+          options: [emoji, number, bullet, none]
+          translation_key: numbering
+    details:
+      name: Details per recipe
+      description: Facts appended to each line in brackets.
+      required: false
+      default: [category]
+      selector:
+        select:
+          multiple: true
+          options: [category, time, rating, calories, difficulty, provider]
+          translation_key: detail
 get_recipe:
   name: Get Recipe
-  description: Fetches a single fresh recipe from Chefkoch directly without reloading the integration, returning all recipe data in the response.
+  description: Fetches fresh recipe(s) matching the given filters directly (no sensor needed). Returns recipe, recipes and message_markdown/html/plain.
   fields:
     recipe_type:
       name: Recipe Type
-      description: Type or category of recipe (e.g. random, weather, vegan, vegetarian, baking, daily, search).
+      description: Kind of recipe (random, weather, vegan, vegetarian, baking, daily, search).
       required: false
       default: random
       selector:
         select:
-          options:
-            - label: "Random Recipe"
-              value: "random"
-            - label: "Weather / Seasonal Recipe"
-              value: "weather"
-            - label: "Vegan Recipe"
-              value: "vegan"
-            - label: "Vegetarian Recipe"
-              value: "vegetarian"
-            - label: "Baking Recipe"
-              value: "baking"
-            - label: "Daily Recipe"
-              value: "daily"
-            - label: "Search Query"
-              value: "search"
+          options: [random, weather, vegan, vegetarian, baking, daily, search]
+          translation_key: sensor_type
+    count:
+      name: Number of recipes
+      required: false
+      default: 1
+      selector:
+        number:
+          min: 1
+          max: 20
+          mode: box
     query:
-      name: Search Query
-      description: Optional keyword for search type.
+      name: Search term
+      description: Free-text search (e.g. 'Pasta', 'Kürbissuppe'). Optional.
       required: false
       selector:
         text:
+    meal_type:
+      name: Meal type
+      description: Restrict to a kind of dish. 'main' excludes desserts, baking, drinks and breakfast (ideal for planning dinner).
+      required: false
+      selector:
+        select:
+          options: [any, main, dessert, breakfast, soup, salad, snack, side, drink]
+          translation_key: meal_type
+    diets:
+      name: Diets
+      description: Required diets.
+      required: false
+      selector:
+        select:
+          multiple: true
+          options: [vegan, vegetarian, low_carb, low_calorie, low_fat, gluten_free]
+          translation_key: diet
+    include_keywords:
+      name: Must contain
+      description: At least one of these words must appear in title, tags, category or ingredients.
+      required: false
+      selector:
+        text:
+          multiple: true
+    exclude_keywords:
+      name: Must not contain
+      description: Recipes with any of these words in title, tags or category are skipped (e.g. Kuchen, Torte).
+      required: false
+      selector:
+        text:
+          multiple: true
+    exclude_ingredients:
+      name: Excluded ingredients
+      description: Recipes containing any of these ingredients are skipped.
+      required: false
+      selector:
+        text:
+          multiple: true
+    categories:
+      name: Categories / cuisines
+      description: At least one must match the recipe's category or cuisine (e.g. Italien, Suppen).
+      required: false
+      selector:
+        text:
+          multiple: true
+    exclude_categories:
+      name: Excluded categories
+      description: Recipes in any of these categories are skipped.
+      required: false
+      selector:
+        text:
+          multiple: true
+    max_total_minutes:
+      name: Max. total time
+      description: Maximum total preparation time in minutes.
+      required: false
+      selector:
+        number:
+          min: 5
+          max: 600
+          step: 5
+          unit_of_measurement: min
+          mode: box
+    min_rating:
+      name: Min. rating
+      description: Minimum average rating (1-5).
+      required: false
+      selector:
+        number:
+          min: 1
+          max: 5
+          step: 0.5
+          mode: box
+    max_difficulty:
+      name: Max. difficulty
+      required: false
+      selector:
+        select:
+          options: [einfach, normal, pfiffig]
+          translation_key: difficulty
+    max_calories:
+      name: Max. calories
+      description: Maximum kcal per serving.
+      required: false
+      selector:
+        number:
+          min: 50
+          max: 3000
+          step: 50
+          unit_of_measurement: kcal
+          mode: box
+    sort:
+      name: Sort order
+      required: false
+      selector:
+        select:
+          options: [relevance, rating, newest]
+          translation_key: sort
+    providers:
+      name: Recipe sources
+      description: Providers to query in this order (chefkoch, themealdb, spoonacular). Empty = integration settings.
+      required: false
+      selector:
+        select:
+          multiple: true
+          options: [chefkoch, themealdb, spoonacular]
+          translation_key: provider
+    header:
+      name: Message header
+      description: Text placed above the recipe list in message_markdown / message_html / message_plain (write it in the target format, e.g. <b>..</b> for Telegram HTML).
+      required: false
+      selector:
+        text:
+          multiline: true
+    footer:
+      name: Message footer
+      description: Text placed below the recipe list.
+      required: false
+      selector:
+        text:
+          multiline: true
+    numbering:
+      name: Numbering style
+      required: false
+      default: emoji
+      selector:
+        select:
+          options: [emoji, number, bullet, none]
+          translation_key: numbering
+    details:
+      name: Details per recipe
+      description: Facts appended to each line in brackets.
+      required: false
+      default: [category]
+      selector:
+        select:
+          multiple: true
+          options: [category, time, rating, calories, difficulty, provider]
+          translation_key: detail
+search_recipes:
+  name: Search Recipes
+  description: Universal recipe search across all configured providers with every filter. Returns recipes and message_markdown/html/plain.
+  fields:
+    count:
+      name: Number of recipes
+      required: false
+      default: 5
+      selector:
+        number:
+          min: 1
+          max: 20
+          mode: box
+    query:
+      name: Search term
+      description: Free-text search (e.g. 'Pasta', 'Kürbissuppe'). Optional.
+      required: false
+      selector:
+        text:
+    meal_type:
+      name: Meal type
+      description: Restrict to a kind of dish. 'main' excludes desserts, baking, drinks and breakfast (ideal for planning dinner).
+      required: false
+      selector:
+        select:
+          options: [any, main, dessert, breakfast, soup, salad, snack, side, drink]
+          translation_key: meal_type
+    diets:
+      name: Diets
+      description: Required diets.
+      required: false
+      selector:
+        select:
+          multiple: true
+          options: [vegan, vegetarian, low_carb, low_calorie, low_fat, gluten_free]
+          translation_key: diet
+    include_keywords:
+      name: Must contain
+      description: At least one of these words must appear in title, tags, category or ingredients.
+      required: false
+      selector:
+        text:
+          multiple: true
+    exclude_keywords:
+      name: Must not contain
+      description: Recipes with any of these words in title, tags or category are skipped (e.g. Kuchen, Torte).
+      required: false
+      selector:
+        text:
+          multiple: true
+    exclude_ingredients:
+      name: Excluded ingredients
+      description: Recipes containing any of these ingredients are skipped.
+      required: false
+      selector:
+        text:
+          multiple: true
+    categories:
+      name: Categories / cuisines
+      description: At least one must match the recipe's category or cuisine (e.g. Italien, Suppen).
+      required: false
+      selector:
+        text:
+          multiple: true
+    exclude_categories:
+      name: Excluded categories
+      description: Recipes in any of these categories are skipped.
+      required: false
+      selector:
+        text:
+          multiple: true
+    max_total_minutes:
+      name: Max. total time
+      description: Maximum total preparation time in minutes.
+      required: false
+      selector:
+        number:
+          min: 5
+          max: 600
+          step: 5
+          unit_of_measurement: min
+          mode: box
+    min_rating:
+      name: Min. rating
+      description: Minimum average rating (1-5).
+      required: false
+      selector:
+        number:
+          min: 1
+          max: 5
+          step: 0.5
+          mode: box
+    max_difficulty:
+      name: Max. difficulty
+      required: false
+      selector:
+        select:
+          options: [einfach, normal, pfiffig]
+          translation_key: difficulty
+    max_calories:
+      name: Max. calories
+      description: Maximum kcal per serving.
+      required: false
+      selector:
+        number:
+          min: 50
+          max: 3000
+          step: 50
+          unit_of_measurement: kcal
+          mode: box
+    sort:
+      name: Sort order
+      required: false
+      selector:
+        select:
+          options: [relevance, rating, newest]
+          translation_key: sort
+    providers:
+      name: Recipe sources
+      description: Providers to query in this order (chefkoch, themealdb, spoonacular). Empty = integration settings.
+      required: false
+      selector:
+        select:
+          multiple: true
+          options: [chefkoch, themealdb, spoonacular]
+          translation_key: provider
+    header:
+      name: Message header
+      description: Text placed above the recipe list in message_markdown / message_html / message_plain (write it in the target format, e.g. <b>..</b> for Telegram HTML).
+      required: false
+      selector:
+        text:
+          multiline: true
+    footer:
+      name: Message footer
+      description: Text placed below the recipe list.
+      required: false
+      selector:
+        text:
+          multiline: true
+    numbering:
+      name: Numbering style
+      required: false
+      default: emoji
+      selector:
+        select:
+          options: [emoji, number, bullet, none]
+          translation_key: numbering
+    details:
+      name: Details per recipe
+      description: Facts appended to each line in brackets.
+      required: false
+      default: [category]
+      selector:
+        select:
+          multiple: true
+          options: [category, time, rating, calories, difficulty, provider]
+          translation_key: detail
 get_recommendations:
   name: Get Recipe Recommendations
-  description: Fetches 3 distinct curated recipes (Weather #1, Vegan/Vegetarian #2, Weather #3) with all attributes returned directly in the response.
+  description: Fetches N distinct recipes (default 3: weather, vegan/vegetarian, weather) honouring all filters. Returns recipe_1..N, recipes and message_markdown/html/plain with the title as link, one recipe per line.
   fields:
+    count:
+      name: Number of recommendations
+      required: false
+      default: 3
+      selector:
+        number:
+          min: 1
+          max: 20
+          mode: box
+    recipe_types:
+      name: Recipe types
+      description: Types cycled through for the recommendations (random, weather, vegan, vegetarian, veg = vegan or vegetarian, baking, daily, search).
+      required: false
+      selector:
+        select:
+          multiple: true
+          custom_value: true
+          options: [weather, veg, vegan, vegetarian, random, baking, daily, search]
+          translation_key: sensor_type
     weather_entity:
       name: Weather Entity
       description: Optional weather entity to evaluate current conditions.
@@ -84,3 +543,196 @@ get_recommendations:
       selector:
         entity:
           domain: weather
+    query:
+      name: Search term
+      description: Free-text search (e.g. 'Pasta', 'Kürbissuppe'). Optional.
+      required: false
+      selector:
+        text:
+    meal_type:
+      name: Meal type
+      description: Restrict to a kind of dish. 'main' excludes desserts, baking, drinks and breakfast (ideal for planning dinner).
+      required: false
+      selector:
+        select:
+          options: [any, main, dessert, breakfast, soup, salad, snack, side, drink]
+          translation_key: meal_type
+    diets:
+      name: Diets
+      description: Required diets.
+      required: false
+      selector:
+        select:
+          multiple: true
+          options: [vegan, vegetarian, low_carb, low_calorie, low_fat, gluten_free]
+          translation_key: diet
+    include_keywords:
+      name: Must contain
+      description: At least one of these words must appear in title, tags, category or ingredients.
+      required: false
+      selector:
+        text:
+          multiple: true
+    exclude_keywords:
+      name: Must not contain
+      description: Recipes with any of these words in title, tags or category are skipped (e.g. Kuchen, Torte).
+      required: false
+      selector:
+        text:
+          multiple: true
+    exclude_ingredients:
+      name: Excluded ingredients
+      description: Recipes containing any of these ingredients are skipped.
+      required: false
+      selector:
+        text:
+          multiple: true
+    categories:
+      name: Categories / cuisines
+      description: At least one must match the recipe's category or cuisine (e.g. Italien, Suppen).
+      required: false
+      selector:
+        text:
+          multiple: true
+    exclude_categories:
+      name: Excluded categories
+      description: Recipes in any of these categories are skipped.
+      required: false
+      selector:
+        text:
+          multiple: true
+    max_total_minutes:
+      name: Max. total time
+      description: Maximum total preparation time in minutes.
+      required: false
+      selector:
+        number:
+          min: 5
+          max: 600
+          step: 5
+          unit_of_measurement: min
+          mode: box
+    min_rating:
+      name: Min. rating
+      description: Minimum average rating (1-5).
+      required: false
+      selector:
+        number:
+          min: 1
+          max: 5
+          step: 0.5
+          mode: box
+    max_difficulty:
+      name: Max. difficulty
+      required: false
+      selector:
+        select:
+          options: [einfach, normal, pfiffig]
+          translation_key: difficulty
+    max_calories:
+      name: Max. calories
+      description: Maximum kcal per serving.
+      required: false
+      selector:
+        number:
+          min: 50
+          max: 3000
+          step: 50
+          unit_of_measurement: kcal
+          mode: box
+    sort:
+      name: Sort order
+      required: false
+      selector:
+        select:
+          options: [relevance, rating, newest]
+          translation_key: sort
+    providers:
+      name: Recipe sources
+      description: Providers to query in this order (chefkoch, themealdb, spoonacular). Empty = integration settings.
+      required: false
+      selector:
+        select:
+          multiple: true
+          options: [chefkoch, themealdb, spoonacular]
+          translation_key: provider
+    header:
+      name: Message header
+      description: Text placed above the recipe list in message_markdown / message_html / message_plain (write it in the target format, e.g. <b>..</b> for Telegram HTML).
+      required: false
+      selector:
+        text:
+          multiline: true
+    footer:
+      name: Message footer
+      description: Text placed below the recipe list.
+      required: false
+      selector:
+        text:
+          multiline: true
+    numbering:
+      name: Numbering style
+      required: false
+      default: emoji
+      selector:
+        select:
+          options: [emoji, number, bullet, none]
+          translation_key: numbering
+    details:
+      name: Details per recipe
+      description: Facts appended to each line in brackets.
+      required: false
+      default: [category]
+      selector:
+        select:
+          multiple: true
+          options: [category, time, rating, calories, difficulty, provider]
+          translation_key: detail
+get_recipe_details:
+  name: Get Recipe Details
+  description: Loads all details of a Chefkoch recipe by URL or id.
+  fields:
+    url:
+      name: Recipe URL or ID
+      required: true
+      selector:
+        text:
+format_recipes:
+  name: Format Recipes
+  description: Renders a list of recipes (e.g. from another response) as message_markdown/html/plain with the title as link, one recipe per line.
+  fields:
+    recipes:
+      name: Recipes
+      description: List of recipe objects with title and url.
+      required: true
+      selector:
+        object:
+    header:
+      name: Message header
+      required: false
+      selector:
+        text:
+          multiline: true
+    footer:
+      name: Message footer
+      required: false
+      selector:
+        text:
+          multiline: true
+    numbering:
+      name: Numbering style
+      required: false
+      default: emoji
+      selector:
+        select:
+          options: [emoji, number, bullet, none]
+          translation_key: numbering
+    details:
+      name: Details per recipe
+      required: false
+      default: [category]
+      selector:
+        select:
+          multiple: true
+          options: [category, time, rating, calories, difficulty, provider]
+          translation_key: detail

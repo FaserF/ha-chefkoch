@@ -1,5 +1,6 @@
 """Sensor platform for Chefkoch."""
 
+import html
 import logging
 
 from homeassistant.components.sensor import SensorEntity
@@ -77,7 +78,16 @@ class ChefkochSensor(CoordinatorEntity, SensorEntity):
             for key, value in data.items()
             if value is not None and value != "" and value != []
         }
-        attributes.pop("title", None)
+        title = attributes.pop("title", None)
         attributes.pop("status", None)
+
+        # Ready-to-use links with the title as link text (for notifications)
+        url = attributes.get("url")
+        if title and url:
+            attributes["link_markdown"] = f"[{title}]({url})"
+            attributes["link_html"] = (
+                f'<a href="{html.escape(str(url), quote=True)}">'
+                f"{html.escape(str(title))}</a>"
+            )
 
         return attributes

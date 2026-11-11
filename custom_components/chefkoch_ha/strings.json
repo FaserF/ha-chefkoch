@@ -3,9 +3,11 @@
     "step": {
       "user": {
         "title": "Set up Chefkoch",
-        "description": "Confirm to set up the Chefkoch integration.\n\nThis will create five default sensors (Random Recipe, Daily Recipe, Vegan Recipe, Vegetarian Recipe, Random Baking Recipe).\n\nCustom search sensors can be added later via 'Configure' on the integration.",
+        "description": "Choose which recipe sensors to create and the default meal type.\n\nRecipes are fetched from official recipe APIs (Chefkoch by default). More sources, detailed filters and your own search sensors can be set up later via 'Configure' on the integration.",
         "data": {
-          "update_interval": "Update interval (hours)"
+          "update_interval": "Update interval (hours)",
+          "meal_type": "Default meal type (use 'main' for dinner planning)",
+          "default_sensors": "Sensors to create"
         }
       }
     },
@@ -16,19 +18,68 @@
   "options": {
     "step": {
       "init": {
-        "title": "Manage Chefkoch Sensors",
+        "title": "Configure Chefkoch",
         "menu_options": {
-          "add_sensor": "Add a new Search Sensor",
-          "edit_sensor": "Edit an existing Search Sensor",
-          "remove_sensor": "Remove a Search Sensor",
-          "update_interval": "Change update interval",
-          "configure_weather": "Configure Weather & Seasonal Specials"
+          "sensors": "Sensors (add, edit, remove, choose defaults)",
+          "filters": "Default filters (meal type, diet, time, keywords, ...)",
+          "providers": "Recipe sources (Chefkoch, TheMealDB, Spoonacular)",
+          "configure_weather": "Weather & seasonal specials",
+          "update_interval": "Update interval"
+        }
+      },
+      "sensors": {
+        "title": "Manage sensors",
+        "menu_options": {
+          "add_sensor": "Add a new sensor",
+          "default_sensors": "Choose built-in sensors",
+          "edit_sensor": "Edit a sensor",
+          "remove_sensor": "Remove sensors"
+        }
+      },
+      "default_sensors": {
+        "title": "Built-in sensors",
+        "description": "Select the built-in sensors you want to have. Your own sensors are not affected.",
+        "data": {
+          "default_sensors": "Built-in sensors"
         }
       },
       "update_interval": {
         "title": "Set Update Interval",
         "data": {
           "update_interval": "Update interval in hours (minimum 1)"
+        }
+      },
+      "filters": {
+        "title": "Default filters",
+        "description": "These filters apply to all sensors and services unless a sensor or service call overrides them. Leave fields empty for 'no restriction'. Detailed keyword filters follow on the next page.",
+        "data": {
+          "meal_type": "Meal type",
+          "diets": "Diets",
+          "max_total_minutes": "Max. total time (minutes)",
+          "min_rating": "Min. rating (1-5)",
+          "max_difficulty": "Max. difficulty",
+          "sort": "Sort order"
+        }
+      },
+      "filters_advanced": {
+        "title": "Default filters: keywords & categories",
+        "description": "Words are matched case-insensitively. Example: exclude 'Kuchen' and 'Torte', or the ingredient 'Fisch'.",
+        "data": {
+          "include_keywords": "Must contain one of",
+          "exclude_keywords": "Must not contain (title, tags, category)",
+          "exclude_ingredients": "Excluded ingredients",
+          "categories": "Only these categories / cuisines",
+          "exclude_categories": "Excluded categories",
+          "max_calories": "Max. calories per serving"
+        }
+      },
+      "providers": {
+        "title": "Recipe sources",
+        "description": "The primary source is queried first; fallback sources are used when it finds nothing matching your filters. Spoonacular needs a free API key from spoonacular.com. TheMealDB and Spoonacular deliver English recipes.",
+        "data": {
+          "primary_provider": "Primary source",
+          "fallback_providers": "Fallback sources",
+          "spoonacular_api_key": "Spoonacular API key"
         }
       },
       "add_sensor": {
@@ -46,17 +97,43 @@
         }
       },
       "add_sensor_form": {
-        "title": "Add New Search Sensor",
+        "title": "Add New Sensor",
+        "description": "Empty fields inherit the default filters. Enable 'Configure detailed filters' for time, rating, diet and keyword filters of this sensor.",
         "data": {
-          "name": "Sensor Name (e.g., 'Cakes')",
-          "search_query": "Search Term (e.g., 'Cheesecake')"
+          "name": "Sensor name (e.g., 'Quick dinner')",
+          "type": "Sensor type",
+          "search_query": "Search term (e.g., 'Pasta')",
+          "provider": "Recipe source",
+          "meal_type": "Meal type",
+          "configure_filters": "Configure detailed filters"
         }
       },
       "edit_sensor_form": {
         "title": "Edit Sensor",
+        "description": "Empty fields inherit the default filters. Enable 'Configure detailed filters' to change time, rating, diet and keyword filters.",
         "data": {
-          "name": "Sensor Name",
-          "search_query": "Search Term"
+          "name": "Sensor name",
+          "search_query": "Search term",
+          "provider": "Recipe source",
+          "meal_type": "Meal type",
+          "configure_filters": "Configure detailed filters"
+        }
+      },
+      "sensor_filters": {
+        "title": "Sensor filters",
+        "description": "These filters override the default filters for this sensor only.",
+        "data": {
+          "diets": "Diets",
+          "max_total_minutes": "Max. total time (minutes)",
+          "min_rating": "Min. rating (1-5)",
+          "max_difficulty": "Max. difficulty",
+          "sort": "Sort order",
+          "include_keywords": "Must contain one of",
+          "exclude_keywords": "Must not contain (title, tags, category)",
+          "exclude_ingredients": "Excluded ingredients",
+          "categories": "Only these categories / cuisines",
+          "exclude_categories": "Excluded categories",
+          "max_calories": "Max. calories per serving"
         }
       },
       "edit_sensor": {
@@ -81,9 +158,102 @@
         }
       }
     },
+    "error": {
+      "api_key_required": "Spoonacular needs an API key. Enter one or remove Spoonacular from the sources."
+    },
     "abort": {
-      "no_custom_sensors": "There are no custom sensors to edit or remove.",
+      "no_custom_sensors": "There are no sensors to edit or remove.",
       "no_sensors": "The selected sensor could not be found."
+    }
+  },
+  "selector": {
+    "meal_type": {
+      "options": {
+        "any": "Any (no restriction)",
+        "main": "Main dish / dinner (no desserts, baking, drinks)",
+        "dessert": "Dessert & baking",
+        "breakfast": "Breakfast",
+        "soup": "Soup & stew",
+        "salad": "Salad",
+        "snack": "Snack & finger food",
+        "side": "Side dish",
+        "drink": "Drink"
+      }
+    },
+    "diet": {
+      "options": {
+        "vegan": "Vegan",
+        "vegetarian": "Vegetarian",
+        "low_carb": "Low carb",
+        "low_calorie": "Low calorie",
+        "low_fat": "Low fat",
+        "gluten_free": "Gluten free"
+      }
+    },
+    "difficulty": {
+      "options": {
+        "einfach": "Easy",
+        "normal": "Normal",
+        "pfiffig": "Challenging"
+      }
+    },
+    "sort": {
+      "options": {
+        "relevance": "Relevance",
+        "rating": "Best rated",
+        "newest": "Newest"
+      }
+    },
+    "provider": {
+      "options": {
+        "auto": "Automatic (integration setting)",
+        "chefkoch": "Chefkoch (German)",
+        "themealdb": "TheMealDB (English, free)",
+        "spoonacular": "Spoonacular (English, API key)"
+      }
+    },
+    "sensor_type": {
+      "options": {
+        "random": "Random recipe",
+        "daily": "Recipe of the day",
+        "weather": "Weather / seasonal recipe",
+        "vegan": "Vegan recipe",
+        "vegetarian": "Vegetarian recipe",
+        "veg": "Vegan or vegetarian (random)",
+        "baking": "Baking recipe",
+        "search": "Search"
+      }
+    },
+    "seasonal_mode": {
+      "options": {
+        "auto": "Automatic (weather + calendar)",
+        "halloween": "Halloween",
+        "christmas": "Christmas",
+        "silvester": "New Year's Eve",
+        "winter": "Winter",
+        "easter": "Easter",
+        "summer": "Summer",
+        "autumn": "Autumn",
+        "weather_only": "Weather only"
+      }
+    },
+    "numbering": {
+      "options": {
+        "emoji": "Emoji numbers (1️⃣ 2️⃣ 3️⃣)",
+        "number": "Numbers (1. 2. 3.)",
+        "bullet": "Bullets",
+        "none": "None"
+      }
+    },
+    "detail": {
+      "options": {
+        "category": "Category",
+        "time": "Total time",
+        "rating": "Rating",
+        "calories": "Calories",
+        "difficulty": "Difficulty",
+        "provider": "Source"
+      }
     }
   }
 }

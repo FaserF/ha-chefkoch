@@ -3,9 +3,11 @@
     "step": {
       "user": {
         "title": "Chefkoch einrichten",
-        "description": "Bestätigen, um die Chefkoch-Integration einzurichten.\n\nDadurch werden fünf Standard-Sensoren erstellt (Zufälliges Rezept, Tägliches Rezept, Veganes Rezept, Vegetarisches Rezept, Zufälliges Backrezept).\n\nEigene Such-Sensoren können später über 'Konfigurieren' bei der Integration hinzugefügt werden.",
+        "description": "Wähle, welche Rezept-Sensoren erstellt werden sollen, und die Standard-Gerichteart.\n\nRezepte kommen aus offiziellen Rezept-APIs (standardmäßig Chefkoch). Weitere Quellen, detaillierte Filter und eigene Such-Sensoren können später über 'Konfigurieren' bei der Integration eingerichtet werden.",
         "data": {
-          "update_interval": "Aktualisierungsintervall (Stunden)"
+          "update_interval": "Aktualisierungsintervall (Stunden)",
+          "meal_type": "Standard-Gerichteart ('Hauptgericht' für die Abendessen-Planung)",
+          "default_sensors": "Zu erstellende Sensoren"
         }
       }
     },
@@ -16,19 +18,68 @@
   "options": {
     "step": {
       "init": {
-        "title": "Chefkoch-Sensoren verwalten",
+        "title": "Chefkoch konfigurieren",
         "menu_options": {
-          "add_sensor": "Neuen Such-Sensor hinzufügen",
-          "edit_sensor": "Bestehenden Such-Sensor bearbeiten",
-          "remove_sensor": "Such-Sensor entfernen",
-          "update_interval": "Aktualisierungsintervall ändern",
-          "configure_weather": "Wetter- & Saison-Specials konfigurieren"
+          "sensors": "Sensoren (hinzufügen, bearbeiten, entfernen, Standard-Sensoren wählen)",
+          "filters": "Standard-Filter (Gerichteart, Ernährung, Zeit, Stichwörter, ...)",
+          "providers": "Rezeptquellen (Chefkoch, TheMealDB, Spoonacular)",
+          "configure_weather": "Wetter- & Saison-Specials",
+          "update_interval": "Aktualisierungsintervall"
+        }
+      },
+      "sensors": {
+        "title": "Sensoren verwalten",
+        "menu_options": {
+          "add_sensor": "Neuen Sensor hinzufügen",
+          "default_sensors": "Standard-Sensoren auswählen",
+          "edit_sensor": "Sensor bearbeiten",
+          "remove_sensor": "Sensoren entfernen"
+        }
+      },
+      "default_sensors": {
+        "title": "Standard-Sensoren",
+        "description": "Wähle die gewünschten Standard-Sensoren. Eigene Sensoren bleiben unberührt.",
+        "data": {
+          "default_sensors": "Standard-Sensoren"
         }
       },
       "update_interval": {
         "title": "Aktualisierungsintervall festlegen",
         "data": {
           "update_interval": "Aktualisierungsintervall in Stunden (mindestens 1)"
+        }
+      },
+      "filters": {
+        "title": "Standard-Filter",
+        "description": "Diese Filter gelten für alle Sensoren und Services, sofern ein Sensor oder Service-Aufruf sie nicht überschreibt. Leere Felder bedeuten 'keine Einschränkung'. Detaillierte Stichwort-Filter folgen auf der nächsten Seite.",
+        "data": {
+          "meal_type": "Gerichteart",
+          "diets": "Ernährungsformen",
+          "max_total_minutes": "Max. Gesamtzeit (Minuten)",
+          "min_rating": "Min. Bewertung (1-5)",
+          "max_difficulty": "Max. Schwierigkeit",
+          "sort": "Sortierung"
+        }
+      },
+      "filters_advanced": {
+        "title": "Standard-Filter: Stichwörter & Kategorien",
+        "description": "Wörter werden ohne Beachtung der Groß-/Kleinschreibung verglichen. Beispiel: 'Kuchen' und 'Torte' ausschließen oder die Zutat 'Fisch'.",
+        "data": {
+          "include_keywords": "Muss eines enthalten",
+          "exclude_keywords": "Darf nicht enthalten (Titel, Tags, Kategorie)",
+          "exclude_ingredients": "Ausgeschlossene Zutaten",
+          "categories": "Nur diese Kategorien / Länderküchen",
+          "exclude_categories": "Ausgeschlossene Kategorien",
+          "max_calories": "Max. Kalorien pro Portion"
+        }
+      },
+      "providers": {
+        "title": "Rezeptquellen",
+        "description": "Die primäre Quelle wird zuerst abgefragt; Ersatzquellen kommen zum Einsatz, wenn sie nichts Passendes zu deinen Filtern findet. Spoonacular benötigt einen kostenlosen API-Schlüssel von spoonacular.com. TheMealDB und Spoonacular liefern englische Rezepte.",
+        "data": {
+          "primary_provider": "Primäre Quelle",
+          "fallback_providers": "Ersatzquellen",
+          "spoonacular_api_key": "Spoonacular API-Schlüssel"
         }
       },
       "add_sensor": {
@@ -46,17 +97,43 @@
         }
       },
       "add_sensor_form": {
-        "title": "Neuen Such-Sensor hinzufügen",
+        "title": "Neuen Sensor hinzufügen",
+        "description": "Leere Felder übernehmen die Standard-Filter. Aktiviere 'Detaillierte Filter konfigurieren' für Zeit-, Bewertungs-, Ernährungs- und Stichwort-Filter dieses Sensors.",
         "data": {
-          "name": "Sensorname (z.B. 'Kuchen')",
-          "search_query": "Suchbegriff (z.B. 'Käsekuchen')"
+          "name": "Sensorname (z.B. 'Schnelles Abendessen')",
+          "type": "Sensortyp",
+          "search_query": "Suchbegriff (z.B. 'Pasta')",
+          "provider": "Rezeptquelle",
+          "meal_type": "Gerichteart",
+          "configure_filters": "Detaillierte Filter konfigurieren"
         }
       },
       "edit_sensor_form": {
         "title": "Sensor bearbeiten",
+        "description": "Leere Felder übernehmen die Standard-Filter. Aktiviere 'Detaillierte Filter konfigurieren', um Zeit-, Bewertungs-, Ernährungs- und Stichwort-Filter zu ändern.",
         "data": {
           "name": "Sensorname",
-          "search_query": "Suchbegriff"
+          "search_query": "Suchbegriff",
+          "provider": "Rezeptquelle",
+          "meal_type": "Gerichteart",
+          "configure_filters": "Detaillierte Filter konfigurieren"
+        }
+      },
+      "sensor_filters": {
+        "title": "Sensor-Filter",
+        "description": "Diese Filter überschreiben die Standard-Filter nur für diesen Sensor.",
+        "data": {
+          "diets": "Ernährungsformen",
+          "max_total_minutes": "Max. Gesamtzeit (Minuten)",
+          "min_rating": "Min. Bewertung (1-5)",
+          "max_difficulty": "Max. Schwierigkeit",
+          "sort": "Sortierung",
+          "include_keywords": "Muss eines enthalten",
+          "exclude_keywords": "Darf nicht enthalten (Titel, Tags, Kategorie)",
+          "exclude_ingredients": "Ausgeschlossene Zutaten",
+          "categories": "Nur diese Kategorien / Länderküchen",
+          "exclude_categories": "Ausgeschlossene Kategorien",
+          "max_calories": "Max. Kalorien pro Portion"
         }
       },
       "edit_sensor": {
@@ -81,9 +158,102 @@
         }
       }
     },
+    "error": {
+      "api_key_required": "Spoonacular benötigt einen API-Schlüssel. Gib einen ein oder entferne Spoonacular aus den Quellen."
+    },
     "abort": {
-      "no_custom_sensors": "Es sind keine benutzerdefinierten Sensoren zum Bearbeiten oder Entfernen vorhanden.",
+      "no_custom_sensors": "Es sind keine Sensoren zum Bearbeiten oder Entfernen vorhanden.",
       "no_sensors": "Der ausgewählte Sensor konnte nicht gefunden werden."
+    }
+  },
+  "selector": {
+    "meal_type": {
+      "options": {
+        "any": "Beliebig (keine Einschränkung)",
+        "main": "Hauptgericht / Abendessen (keine Desserts, Kuchen, Getränke)",
+        "dessert": "Dessert & Backen",
+        "breakfast": "Frühstück",
+        "soup": "Suppe & Eintopf",
+        "salad": "Salat",
+        "snack": "Snack & Fingerfood",
+        "side": "Beilage",
+        "drink": "Getränk"
+      }
+    },
+    "diet": {
+      "options": {
+        "vegan": "Vegan",
+        "vegetarian": "Vegetarisch",
+        "low_carb": "Low Carb",
+        "low_calorie": "Kalorienarm",
+        "low_fat": "Fettarm",
+        "gluten_free": "Glutenfrei"
+      }
+    },
+    "difficulty": {
+      "options": {
+        "einfach": "Einfach",
+        "normal": "Normal",
+        "pfiffig": "Pfiffig"
+      }
+    },
+    "sort": {
+      "options": {
+        "relevance": "Relevanz",
+        "rating": "Beste Bewertung",
+        "newest": "Neueste"
+      }
+    },
+    "provider": {
+      "options": {
+        "auto": "Automatisch (Integrations-Einstellung)",
+        "chefkoch": "Chefkoch (deutsch)",
+        "themealdb": "TheMealDB (englisch, kostenlos)",
+        "spoonacular": "Spoonacular (englisch, API-Schlüssel)"
+      }
+    },
+    "sensor_type": {
+      "options": {
+        "random": "Zufälliges Rezept",
+        "daily": "Rezept des Tages",
+        "weather": "Wetter- / Saison-Rezept",
+        "vegan": "Veganes Rezept",
+        "vegetarian": "Vegetarisches Rezept",
+        "veg": "Vegan oder vegetarisch (zufällig)",
+        "baking": "Backrezept",
+        "search": "Suche"
+      }
+    },
+    "seasonal_mode": {
+      "options": {
+        "auto": "Automatisch (Wetter + Kalender)",
+        "halloween": "Halloween",
+        "christmas": "Weihnachten",
+        "silvester": "Silvester",
+        "winter": "Winter",
+        "easter": "Ostern",
+        "summer": "Sommer",
+        "autumn": "Herbst",
+        "weather_only": "Nur Wetter"
+      }
+    },
+    "numbering": {
+      "options": {
+        "emoji": "Emoji-Zahlen (1️⃣ 2️⃣ 3️⃣)",
+        "number": "Zahlen (1. 2. 3.)",
+        "bullet": "Aufzählungspunkte",
+        "none": "Keine"
+      }
+    },
+    "detail": {
+      "options": {
+        "category": "Kategorie",
+        "time": "Gesamtzeit",
+        "rating": "Bewertung",
+        "calories": "Kalorien",
+        "difficulty": "Schwierigkeit",
+        "provider": "Quelle"
+      }
     }
   }
 }

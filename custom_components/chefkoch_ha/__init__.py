@@ -2,6 +2,8 @@
 
 import asyncio
 import logging
+import random
+import re
 from datetime import timedelta
 from typing import Any
 
@@ -23,6 +25,12 @@ except ImportError:
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .const import DEFAULT_UPDATE_INTERVAL, DOMAIN
+from .engine import (
+    RECOMMENDATION_PATTERN,
+    async_get_recipes,
+)
+from .filters import parse_list
+from .formatting import render_recipes
 from .parser import (
     _get_id_from_url,
     _scale_ingredient,
@@ -57,9 +65,58 @@ __all__ = [
     "options_update_listener",
 ]
 
+#: Service fields forwarded 1:1 into the layered recipe filter.
+FILTER_KEYS = (
+    "query",
+    "meal_type",
+    "diets",
+    "include_keywords",
+    "exclude_keywords",
+    "exclude_ingredients",
+    "categories",
+    "exclude_categories",
+    "max_total_minutes",
+    "min_rating",
+    "max_difficulty",
+    "max_calories",
+    "sort",
+)
+MAX_RESULTS = 20
+
+
+def _filter_overrides(data: Any) -> dict[str, Any]:
+    """Extract the filter fields a service call actually set."""
+    return {
+        key: data[key]
+        for key in FILTER_KEYS
+        if key in data and data[key] not in (None, "", [])
+    }
+
+
+def _render(recipes: list[dict[str, Any]], data: Any) -> dict[str, str]:
+    """Build the ``message_*`` fields (title-as-link, one recipe per line)."""
+    details = data.get("details")
+    rendered = render_recipes(
+        [r for r in recipes if r.get("url")],
+        header=str(data.get("header") or ""),
+        footer=str(data.get("footer") or ""),
+        numbering=str(data.get("numbering") or "emoji"),
+        details=parse_list(details) if details is not None else None,
+    )
+    return {f"message_{key}": value for key, value in rendered.items()}
+
+
+def _no_recipe() -> dict[str, Any]:
+    return {
+        "title": "No recipe found",
+        "url": "",
+        "status": "warning",
+        "error_message": "No matching recipe found.",
+    }
+
 
 async def async_update_data(hass: HomeAssistant, entry: ConfigEntry) -> dict[str, Any]:
-    """Fetch data from Chefkoch for all configured sensors."""
+    """Fetch data from the configured providers for all configured sensors."""
     sensors: list[dict[str, Any]] = entry.options.get("sensors", [])
     if not sensors:
         return {}
@@ -87,24 +144,14 @@ async def async_update_data(hass: HomeAssistant, entry: ConfigEntry) -> dict[str
         sensor_type = sensor_config.get("type", "")
 
         try:
-            weather_cat = None
-            cfg = dict(sensor_config)
-            if sensor_type == "weather":
-                weather_query, weather_cat = await hass.async_add_executor_job(
-                    _get_weather_recipe_query, hass, sensor_config, entry.options
-                )
-                cfg["search_query"] = weather_query
-
-            recipe_url = await _fetch_recipe_url(cfg, hass=hass)
-            if recipe_url:
-                attributes = await hass.async_add_executor_job(
-                    extract_recipe_attributes, recipe_url
-                )
-                if weather_cat:
-                    attributes["weather_category"] = weather_cat
-                    attributes["search_term"] = cfg.get("search_query")
-
-                data[sensor_id] = attributes
+            recipes = await async_get_recipes(
+                hass,
+                entry.options,
+                recipe_type=sensor_type or "search",
+                sensor_cfg=sensor_config,
+            )
+            if recipes:
+                data[sensor_id] = recipes[0]
             else:
                 _LOGGER.warning("No recipe found for sensor %s", sensor_name)
                 if sensor_id not in data:
@@ -178,8 +225,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         scale_factor = 1.0
         if target_servings and isinstance(target_servings, (int, float)):
             orig_servings_str = str(state.attributes.get("servings", ""))
-            import re
-
             m = re.search(r"\d+", orig_servings_str)
             if m:
                 try:
@@ -204,11 +249,29 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             scale_factor,
         )
 
+    async def _get_recipes(
+        recipe_type: str,
+        data: Any,
+        count: int = 1,
+        exclude_urls: set[str] | None = None,
+    ) -> list[dict[str, Any]]:
+        """Resolve recipes for a service call (filters + providers from call data)."""
+        return await async_get_recipes(
+            hass,
+            entry.options,
+            recipe_type=recipe_type,
+            overrides=_filter_overrides(data),
+            providers=data.get("providers") or data.get("provider"),
+            count=count,
+            exclude_urls=exclude_urls,
+        )
+
     async def handle_generate_meal_plan(call):
         """Generate a multi-day meal plan and fire an event with the results."""
-        days = int(call.data.get("days", 7))
-        query = call.data.get("query", "").strip() or "Rezept"
-        days = max(1, min(days, 7))
+        data = call.data
+        days = max(1, min(int(data.get("days", 7)), 7))
+        query = str(data.get("query") or "").strip()
+        recipe_type = str(data.get("recipe_type") or "search")
 
         _LOGGER.debug(
             "Service chefkoch_ha.generate_meal_plan called: days=%d, query=%s",
@@ -216,147 +279,126 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             query,
         )
 
-        meal_plan: list[dict[str, str]] = []
-        sensor_cfg = {"search_query": query}
-
+        meal_plan: list[dict[str, Any]] = []
+        recipes_out: list[dict[str, Any]] = []
+        seen: set[str] = set()
+        call_data = dict(data)
         for day_index in range(days):
             try:
-                url = await _fetch_recipe_url(
-                    {"type": "search", **sensor_cfg}, hass=hass
-                )
-                if url:
-                    recipe_id = _get_id_from_url(url)
-                    title = ""
-                    if recipe_id:
-                        try:
-                            attrs = await asyncio.to_thread(
-                                fetch_recipe_attributes_from_api, recipe_id
-                            )
-                            title = attrs.get("title", "")
-                        except Exception as fetch_err:
-                            _LOGGER.debug(
-                                "Failed to fetch recipe title for day %d: %s",
-                                day_index + 1,
-                                fetch_err,
-                            )
-                    meal_plan.append(
-                        {
-                            "day": str(day_index + 1),
-                            "url": url,
-                            "title": title or url,
-                        }
-                    )
+                recipes = await _get_recipes(recipe_type, call_data, 1, set(seen))
             except Exception as err:
                 _LOGGER.warning(
                     "Could not fetch recipe for day %d: %s", day_index + 1, err
                 )
+                continue
+            if not recipes:
+                continue
+            recipe = recipes[0]
+            seen.add(str(recipe.get("url")))
+            recipes_out.append(recipe)
+            meal_plan.append(
+                {
+                    "day": str(day_index + 1),
+                    "url": recipe.get("url", ""),
+                    "title": recipe.get("title") or recipe.get("url", ""),
+                    "category": recipe.get("category", ""),
+                }
+            )
 
+        messages = _render(recipes_out, data)
         hass.bus.async_fire(
             "chefkoch_meal_plan_generated",
-            {"meal_plan": meal_plan, "days": days, "query": query},
+            {"meal_plan": meal_plan, "days": days, "query": query, **messages},
         )
         _LOGGER.info(
             "Meal plan generated: %d entries for query '%s'", len(meal_plan), query
         )
+        return {"meal_plan": meal_plan, "recipes": recipes_out, **messages}
+
+    async def handle_get_recipe(call):
+        """Fetch fresh recipe(s) matching the given filters and return them."""
+        data = call.data
+        recipe_type = data.get("recipe_type", "random")
+        count = max(1, min(int(data.get("count", 1) or 1), MAX_RESULTS))
+        recipes = await _get_recipes(recipe_type, data, count)
+        recipe = recipes[0] if recipes else _no_recipe()
+        return {
+            "recipe": recipe,
+            "recipes": recipes,
+            "count": len(recipes),
+            **_render(recipes, data),
+        }
+
+    async def handle_search_recipes(call):
+        """Universal search: any provider, any filter, 1..N results."""
+        data = call.data
+        count = max(1, min(int(data.get("count", 5) or 5), MAX_RESULTS))
+        recipes = await _get_recipes(data.get("recipe_type", "search"), data, count)
+        return {"recipes": recipes, "count": len(recipes), **_render(recipes, data)}
+
+    async def handle_get_recommendations(call):
+        """Fetch N distinct curated recipes (default: weather, vegan/veg, weather)."""
+        data = call.data
+        count = max(1, min(int(data.get("count", 3) or 3), MAX_RESULTS))
+        types = parse_list(data.get("recipe_types")) or RECOMMENDATION_PATTERN
+
+        recipes: list[dict[str, Any]] = []
+        excluded: set[str] = set()
+        for i in range(count):
+            recipe_type = types[i % len(types)]
+            if recipe_type == "veg":
+                recipe_type = random.choice(["vegan", "vegetarian"])
+            found = await _get_recipes(recipe_type, data, 1, excluded)
+            recipe = found[0] if found else _no_recipe()
+            if recipe.get("url"):
+                excluded.add(str(recipe["url"]))
+            recipes.append(recipe)
+
+        result: dict[str, Any] = {f"recipe_{i + 1}": r for i, r in enumerate(recipes)}
+        result["recipes"] = recipes
+        result["count"] = len(recipes)
+        result.update(_render(recipes, data))
+        return result
+
+    async def handle_get_recipe_details(call):
+        """Load the full details of a Chefkoch recipe URL or id."""
+        ref = str(call.data.get("url") or call.data.get("recipe_id") or "")
+        recipe_id = _get_id_from_url(ref) or (ref if ref.isdigit() else None)
+        if not recipe_id:
+            return {"recipe": _no_recipe()}
+        recipe = await hass.async_add_executor_job(
+            extract_recipe_attributes, f"https://www.chefkoch.de/rezepte/{recipe_id}/"
+        )
+        return {"recipe": recipe}
+
+    async def handle_format_recipes(call):
+        """Render a list of recipes (e.g. from a previous response) for messaging."""
+        recipes = call.data.get("recipes") or []
+        return {"count": len(recipes), **_render(list(recipes), call.data)}
 
     hass.services.async_register(DOMAIN, "refresh_recipe", handle_refresh_recipe)
     hass.services.async_register(
         DOMAIN, "add_to_shopping_list", handle_add_to_shopping_list
     )
-
-    async def _fetch_single_recipe(
-        recipe_type: str = "random",
-        query: str = "",
-        excluded_urls: set[str] | None = None,
-    ) -> dict[str, Any]:
-        """Fetch a single fresh recipe and its full attributes directly via API."""
-        cfg = {"type": recipe_type}
-        if query:
-            cfg["search_query"] = query
-        weather_cat = None
-        if recipe_type == "weather":
-            w_query, weather_cat = await hass.async_add_executor_job(
-                _get_weather_recipe_query, hass, cfg, entry.options
-            )
-            cfg["search_query"] = w_query
-
-        url = None
-        for _ in range(3):
-            url = await _fetch_recipe_url(cfg, hass=hass)
-            if url and (not excluded_urls or url not in excluded_urls):
-                break
-
-        if not url:
-            return {
-                "title": "No recipe found",
-                "url": "",
-                "status": "warning",
-                "error_message": "No matching recipe found.",
-            }
-
-        attributes = await hass.async_add_executor_job(extract_recipe_attributes, url)
-        if weather_cat:
-            attributes["weather_category"] = weather_cat
-            attributes["category"] = weather_cat
-        elif recipe_type == "vegan":
-            attributes["diet"] = "Vegan"
-            attributes["category"] = "Vegan"
-        elif recipe_type == "vegetarian":
-            attributes["diet"] = "Vegetarisch"
-            attributes["category"] = "Vegetarisch"
-        elif attributes.get("cuisine"):
-            attributes["category"] = attributes["cuisine"]
-        elif attributes.get("category_breadcrumb"):
-            attributes["category"] = attributes["category_breadcrumb"][-1]
-        else:
-            attributes["category"] = "Klassiker"
-        return attributes
-
-    async def handle_get_recipe(call):
-        """Fetch a single fresh recipe and return it in service response."""
-        recipe_type = call.data.get("recipe_type", "random")
-        query = call.data.get("query", "").strip()
-        recipe = await _fetch_single_recipe(recipe_type=recipe_type, query=query)
-        return {"recipe": recipe}
-
-    async def handle_get_recommendations(call):
-        """Fetch 3 curated recipes (Weather #1, Vegan/Veg #2, Weather #3) and return them."""
-        import random
-
-        r1 = await _fetch_single_recipe(recipe_type="weather")
-        excluded: set[str] = set()
-        if r1.get("url"):
-            excluded.add(str(r1["url"]))
-
-        veg_type = random.choice(["vegan", "vegetarian"])
-        r2 = await _fetch_single_recipe(recipe_type=veg_type, excluded_urls=excluded)
-        if r2.get("url"):
-            excluded.add(str(r2["url"]))
-
-        r3 = await _fetch_single_recipe(recipe_type="weather", excluded_urls=excluded)
-
-        return {
-            "recipe_1": r1,
-            "recipe_2": r2,
-            "recipe_3": r3,
-            "recipes": [r1, r2, r3],
-        }
-
-    hass.services.async_register(
-        DOMAIN, "generate_meal_plan", handle_generate_meal_plan
-    )
     hass.services.async_register(
         DOMAIN,
-        "get_recipe",
-        handle_get_recipe,
+        "generate_meal_plan",
+        handle_generate_meal_plan,
         supports_response=SupportsResponse.OPTIONAL,
     )
-    hass.services.async_register(
-        DOMAIN,
-        "get_recommendations",
-        handle_get_recommendations,
-        supports_response=SupportsResponse.OPTIONAL,
-    )
+    for name, handler in (
+        ("get_recipe", handle_get_recipe),
+        ("search_recipes", handle_search_recipes),
+        ("get_recommendations", handle_get_recommendations),
+        ("get_recipe_details", handle_get_recipe_details),
+        ("format_recipes", handle_format_recipes),
+    ):
+        hass.services.async_register(
+            DOMAIN,
+            name,
+            handler,
+            supports_response=SupportsResponse.OPTIONAL,
+        )
 
     entry.async_on_unload(entry.add_update_listener(options_update_listener))
     await hass.config_entries.async_forward_entry_setups(entry, ["sensor"])
