@@ -515,7 +515,7 @@ search_recipes:
           translation_key: detail
 get_recommendations:
   name: Get Recipe Recommendations
-  description: Fetches N distinct recipes (default 3: weather, vegan/vegetarian, weather) honouring all filters. Returns recipe_1..N, recipes and message_markdown/html/plain with the title as link, one recipe per line.
+  description: Fetches N distinct recipes (default 3 - weather, vegan/vegetarian, weather) honouring all filters. Returns recipe_1..N, recipes and message_markdown/html/plain with the title as link, one recipe per line.
   fields:
     count:
       name: Number of recommendations
